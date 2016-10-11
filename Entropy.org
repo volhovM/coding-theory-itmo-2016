@@ -1,0 +1,109 @@
+#+LANGUAGE: en
+#+TITLE: Information theory: HW #1 solution
+#+AUTHOR: Volkhov Mikhail, M3338
+
+* Part I: computing the entropy of a given file, comparing with standart archiving tool
+  My variant is 10, so the file I needed to process, accordingly to
+  the information in ~list_of_files.docx~ is ~PIC~. The first part of
+  the task suggests to compute the empiric probability distribution
+  for block length of $n ∈ {1,2,3,4}$, including all
+  subblocks/substrings. I'll provide a short code snipped in haskell
+  that shows how it's done. Code examples are provided as a proof of
+  work mostly, because haskell is pretty specific language and i
+  acknowledge that understanding it from a scratch requires a lot of
+  effort. I'll leave some explanation notes though.
+
+  #+BEGIN_SRC haskell
+  file :: ByteString
+  file = $(embedFile "/home/volhovm/code/coding-theory/PIC")
+
+  -- Returns all substrings of length l of `file`
+  subBlocks :: Int -> [ByteString]
+  subBlocks bSize =
+      map (\i -> BS.take bSize $ BS.drop i file)
+          [0..(BS.length file - bSize - 1)]
+
+  -- Given a block size returns a map from substring to number of occurences
+  distributionMap :: Int -> M.Map ByteString Int
+  distributionMap bSize =
+      foldr (M.alter $ Just . maybe 1 (+1)) M.empty $ subBlocks bSize
+  #+END_SRC
+
+  ~file~ is function that returns ~string~ content of the file
+  ~PIC~. The file is imported as bytestring which is alias for array
+  of bytes (~Byte8~). ~subBlocks~ is a function that, when given
+  ~bSize~ -- the length of the passing window/block, returns all
+  substrings of this length. ~distributionMap~ collects a map from
+  ~string~ to ~int~, where ~key : string~ is a substring of length
+  ~bSize~, and element ~int~ is a number of this substring occurences
+  in the ~file~.
+
+  Next step is computing entropy $H(X)$:
+
+  #+BEGIN_SRC haskell
+  -- Generates an entropy from block size
+  entropy :: Int -> Double
+  entropy bSize =
+    let dm = distributionMap bSize
+        n = intcast $ BS.length file - bSize
+        distribution = M.map (\x -> intcast x / n) dm
+        entr = negate $ sum $ map (\x -> x * log x) $ M.elems distribution
+    in entr / intcast bSize
+  #+END_SRC
+
+  Variable ~dm~ retrieves a distribution map using already introduced
+  function. ~n~ is the number of all subblocks/windows inspected:
+  $length(file) - blockSize$. ~distribution~ stays for the same map,
+  but with modified elements -- each number of occurences is now
+  divided by ~n~. And, finally, ~entr~ is entropy -- for every element
+  $x$ in ~distribution~ it first computes $x * \log(x)$, then sums
+  them all and negates, that's exactly $-\sum_{z∈X}p(z)\log{p(z)}$,
+  where $x = p(z)$.
+
+  Finally, ~entropy~ function is runned $4$ times with values $bSize ∈
+  {1..4}$:
+
+  #+BEGIN_SRC haskell
+  main :: IO ()
+  main = forM_ [1..4] $ \i -> putStr (show i ++ ": ") >> print (entropy i)
+  #+END_SRC
+
+  That produces the following result:
+
+  #+ATTR_HTML: :border 2 :rules all :frame border
+  | n | entropy per char |
+  |---+------------------|
+  | 1 |           0.8388 |
+  | 2 |           0.7048 |
+  | 3 |           0.6328 |
+  | 4 |           0.5665 |
+
+  Next step is applying archiver algorithm to data and comparing practical
+  results of compression with theoretical data. I chose to use gzip
+  algorithm from the library to avoid metadata addition that may
+  happen if console archiver is applied. Results with best compression
+  settings (where $U$ stays for "uncompressed" file, $C$ for
+  compressed and $s(..)$ for size) are:
+
+  #+ATTR_HTML: :border 2 :rules all :frame border
+  | s(U) (bytes) | s(C) (bytes) |
+  |--------------+--------------|
+  |       513216 |        52218 |
+
+  As it can be seen, compression ratio is $≈9.828$. The number
+  correlates well with $8 / 0.8388 = 9.54$ (bits in byte / entropy per
+  bit) for block size $1$. Computing other sizes gives us ratios
+  $11.4$ for block size $2$, $12.6$ for $3$ and $14.2$ for $4$. So
+  theoretical minimum compression ratio is higher than practical.
+* Part II: bonus task
+  Let's assume that $X = \{x, p(x)\}$ is given discrete ensemble and
+  $n$ is a length of input file. After first half of file is
+  processed, we get knowledge about values of $(x_1 ... x_{n/2}), x_i
+  ∈ X_i = X$. Two common approaches to encoding the data is:
+  1. Extending the alphabet, introducing fixed blocks of initial
+     alphabet characters (let's say of a size $n$) as new alphabet
+     characters.
+  2. Taking into account relation of current character and previous
+     ones.
+
+  Theorem 1.5.c states that $H_n(X) ≥ H(X|X^{n-1})$.

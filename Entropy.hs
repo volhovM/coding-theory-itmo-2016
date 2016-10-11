@@ -1,36 +1,54 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+
 module Main where
 
-import           Control.Monad   (forM_)
-import qualified Data.ByteString as BS
-import           Data.FileEmbed  (embedFile, embedStringFile)
-import qualified Data.Map        as M
-import           Debug.Trace
+import           Codec.Compression.GZip (CompressParams (..))
+import qualified Codec.Compression.GZip as Z
+import           Control.Monad          (forM_)
+import           Data.ByteString        (ByteString)
+import qualified Data.ByteString        as BS
+import qualified Data.ByteString.Lazy   as BSL
+import           Data.FileEmbed         (embedFile)
+import qualified Data.Map               as M
 
-file :: BS.ByteString
+file, file2 :: ByteString
 file = $(embedFile "/home/volhovm/code/coding-theory/PIC")
+file2 = BS.take (BS.length file) file
+
+compress :: BSL.ByteString -> BSL.ByteString
+compress =
+    Z.compressWith $
+    Z.defaultCompressParams
+    { compressLevel = Z.bestCompression
+    , compressMemoryLevel = Z.maxMemoryLevel
+    }
+
+-- (513216,52218)
+sizes = (BS.length file, BSL.length . compress $ BSL.fromStrict file)
 
 intcast = fromInteger . toInteger
 
-subBlocks :: Int -> [BS.ByteString]
-subBlocks bSize | bSize <= 0 = error "kek"
+-- Returns all substrings of length l of `file`
+subBlocks :: Int -> [ByteString]
 subBlocks bSize =
-    map (\i -> BS.take bSize $ BS.drop i file)
+    map (\i -> BS.take bSize $ BS.drop i file2)
         [0..(BS.length file - bSize - 1)]
 
-distributionMap :: Int -> M.Map BS.ByteString Int
+-- Given a block size returns a map from substring to number of occurences
+distributionMap :: Int -> M.Map ByteString Int
 distributionMap bSize =
     foldr (M.alter $ Just . maybe 1 (+1)) M.empty $ subBlocks bSize
 
+-- Generates an entropy from block size
+entropy :: Int -> Double
 entropy bSize =
   let dm = distributionMap bSize
-      n = intcast $ sum $ M.elems dm
-      distribution :: M.Map BS.ByteString Double
+      --n = intcast $ sum $ M.elems dm
+      n = intcast $ BS.length file2 - bSize
       distribution = M.map (\x -> intcast x / n) dm
       entr = negate $ sum $ map (\x -> x * log x) $ M.elems distribution
-  in
---    trace (show n) $
---    trace (show $ take 15 $ M.elems dm) $
-    entr / intcast bSize
+  in entr / intcast bSize
 
-main = forM_ [1..5] $ \i -> putStr (show i ++ ": ") >> print (entropy i)
+main :: IO ()
+main = forM_ [1..4] $ \i -> putStr (show i ++ ": ") >> print (entropy i)
