@@ -106,4 +106,26 @@
   2. Taking into account relation of current character and previous
      ones.
 
-  Theorem 1.5.c states that $H_n(X) ≥ H(X|X^{n-1})$.
+  Theorem 1.5.c states that $H_n(X) ≥ H(X|X^{n-1})$, so more optimal
+  entropy comes when we include previous results into creating
+  encoding algorithm.
+
+  The most naive approach is to calculate, using the instructions for
+  the part 1, entropy for the first and the second parts of our
+  datafile. Here are the results (obtained from modified solution for
+  part 1):
+
+  #+ATTR_HTML: :border 2 :rules all :frame border
+  | n | First part | Second part |
+  |---+------------+-------------|
+  | 1 |     0.9961 |      0.6724 |
+  | 2 |     0.8370 |      0.5597 |
+  | 3 |     0.7456 |      0.4951 |
+  | 4 |     0.6589 |      0.4407 |
+
+  So it can be seen that though the entropy in the first half is
+  higher, it's less efficient to construct encoding algorithm using
+  information about, let's say, blocks (if we're thinking in context
+  of encoding blocks of constant size) from the first part only. So as
+  probability distribution is not the same, any algorithm created in
+  the task context will be less efficient.

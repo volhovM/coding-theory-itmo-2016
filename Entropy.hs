@@ -12,9 +12,9 @@ import qualified Data.ByteString.Lazy   as BSL
 import           Data.FileEmbed         (embedFile)
 import qualified Data.Map               as M
 
-file, file2 :: ByteString
+file :: ByteString
 file = $(embedFile "/home/volhovm/code/coding-theory/PIC")
-file2 = BS.take (BS.length file) file
+m = BS.length file
 
 compress :: BSL.ByteString -> BSL.ByteString
 compress =
@@ -32,8 +32,8 @@ intcast = fromInteger . toInteger
 -- Returns all substrings of length l of `file`
 subBlocks :: Int -> [ByteString]
 subBlocks bSize =
-    map (\i -> BS.take bSize $ BS.drop i file2)
-        [0..(BS.length file - bSize - 1)]
+    map (\i -> BS.take bSize $ BS.drop i file)
+        [0..(m - bSize - 1)]
 
 -- Given a block size returns a map from substring to number of occurences
 distributionMap :: Int -> M.Map ByteString Int
@@ -45,7 +45,7 @@ entropy :: Int -> Double
 entropy bSize =
   let dm = distributionMap bSize
       --n = intcast $ sum $ M.elems dm
-      n = intcast $ BS.length file2 - bSize
+      n = intcast $ m - bSize
       distribution = M.map (\x -> intcast x / n) dm
       entr = negate $ sum $ map (\x -> x * log x) $ M.elems distribution
   in entr / intcast bSize

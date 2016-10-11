@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Information theory: HW #1 solution</title>
-<!-- 2016-10-11 Tue 23:21 -->
+<!-- 2016-10-12 Wed 00:10 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Volkhov Mikhail, M3338" />
@@ -360,15 +360,91 @@ theoretical minimum compression ratio is higher than practical.
 <div class="outline-text-2" id="text-2">
 <p>
 Let's assume that \(X = \{x, p(x)\}\) is given discrete ensemble and
-\(n\) is a length of input file. When half of file is processed, we
-have enough knowledge about values of \(X_1 ... X_{n/2}\).
+\(n\) is a length of input file. After first half of file is
+processed, we get knowledge about values of \((x_1 ... x_{n/2}), x_i
+  ∈ X_i = X\). Two common approaches to encoding the data is:
+</p>
+<ol class="org-ol">
+<li>Extending the alphabet, introducing fixed blocks of initial
+alphabet characters (let's say of a size \(n\)) as new alphabet
+characters.
+</li>
+<li>Taking into account relation of current character and previous
+ones.
+</li>
+</ol>
+
+<p>
+Theorem 1.5.c states that \(H_n(X) ≥ H(X|X^{n-1})\), so more optimal
+entropy comes when we include previous results into creating
+encoding algorithm.
+</p>
+
+<p>
+The most naive approach is to calculate, using the instructions for
+the part 1, entropy for the first and the second parts of our
+datafile. Here are the results (obtained from modified solution for
+part 1):
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border">
+
+
+<colgroup>
+<col  class="right" />
+
+<col  class="right" />
+
+<col  class="right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="right">n</th>
+<th scope="col" class="right">First part</th>
+<th scope="col" class="right">Second part</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="right">1</td>
+<td class="right">0.9961</td>
+<td class="right">0.6724</td>
+</tr>
+
+<tr>
+<td class="right">2</td>
+<td class="right">0.8370</td>
+<td class="right">0.5597</td>
+</tr>
+
+<tr>
+<td class="right">3</td>
+<td class="right">0.7456</td>
+<td class="right">0.4951</td>
+</tr>
+
+<tr>
+<td class="right">4</td>
+<td class="right">0.6589</td>
+<td class="right">0.4407</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+So it can be seen that though the entropy in the first half is
+higher, it's less efficient to construct encoding algorithm using
+information about, let's say, blocks (if we're thinking in context
+of encoding blocks of constant size) from the first part only. So as
+probability distribution is not the same, any algorithm created in
+the task context will be less efficient.
 </p>
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Volkhov Mikhail, M3338</p>
-<p class="date">Created: 2016-10-11 Tue 23:21</p>
+<p class="date">Created: 2016-10-12 Wed 00:10</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.5.2 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
