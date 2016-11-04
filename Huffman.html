@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2016-11-04 Fri 14:18 -->
+<meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta  name="viewport" content="width=device-width, initial-scale=1" />
+<title>Information theory: HW #2 solution</title>
+<meta  name="generator" content="Org-mode" />
+<meta  name="author" content="Volkhov Mikhail, M3338" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  pre.src-sh:before    { content: 'sh'; }
+  pre.src-bash:before  { content: 'sh'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-R:before     { content: 'R'; }
+  pre.src-perl:before  { content: 'Perl'; }
+  pre.src-java:before  { content: 'Java'; }
+  pre.src-sql:before   { content: 'SQL'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2013 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Information theory: HW #2 solution</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgheadline1">1. Markov chain entropy</a></li>
+<li><a href="#orgheadline2">2. Huffman codes</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgheadline1" class="outline-2">
+<h2 id="orgheadline1"><span class="section-number-2">1</span> Markov chain entropy</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+First, short remark I've already given in the previous homework: I'm
+putting some haskell code here just for fun/more detailed
+explanation/proof-of-work. Please skip it if it's too borkng.
+</p>
+
+<p>
+Let's consider the following matrix:
+</p>
+
+\begin{align*}
+E =
+\begin{pmatrix}
+1/4 & 0 & 3/4\\
+0 & 1/4 & 3/4\\
+1/4 & 1/2 & 1/4
+\end{pmatrix}
+\end{align*}
+
+<p>
+First task is to find such \(p\) that \(p = pH\). This can be done, in
+fact, in two ways. First one is solving the following equation:
+</p>
+
+\begin{align*}
+\begin{pmatrix}x&y&z\end{pmatrix}=
+\begin{pmatrix}x&y&z\end{pmatrix}*E
+\end{align*}
+
+<p>
+Indeed, this equation system has a solution (skipped): \(P = (1/6, 1/3,
+  1/2)\). But it can be though obtained in another way. Let's suppose \(E\)
+is ergodic, then accordingly to ergodic theorem <sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup> \(E^n\) converges
+to \(A\), where each row of it is equal to \(P\). This can be easily
+seen in practice:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-haskell"><span style="color: #868B44;">--</span><span style="color: #333333;"> </span><span style="color: #868B44;">|</span><span style="color: #333333;"> </span><span style="color: #868B44;">This</span><span style="color: #333333;"> </span><span style="color: #868B44;">function</span><span style="color: #333333;"> </span><span style="color: #868B44;">takes</span><span style="color: #333333;"> </span><span style="color: #868B44;">matrix</span><span style="color: #333333;"> </span><span style="color: #868B44;">and</span><span style="color: #333333;"> </span><span style="color: #868B44;">raises</span><span style="color: #333333;"> </span><span style="color: #868B44;">it</span><span style="color: #333333;"> </span><span style="color: #868B44;">to</span><span style="color: #333333;"> </span><span style="color: #868B44;">the</span><span style="color: #333333;"> </span><span style="color: #868B44;">power</span><span style="color: #333333;"> </span><span style="color: #868B44;">n.</span>
+<span style="color: #868B44;">--</span><span style="color: #333333;"> </span><span style="color: #868B44;">(!*!)</span><span style="color: #333333;"> </span><span style="color: #868B44;">is</span><span style="color: #333333;"> </span><span style="color: #868B44;">matrix</span><span style="color: #333333;"> </span><span style="color: #868B44;">multiplication.</span>
+(<span style="color: #8AAFFA;">!*^</span>)<span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Matrix</span><span style="color: #333333;"> </span><span style="color: #A197BF;">-&gt;</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Int</span><span style="color: #333333;"> </span><span style="color: #A197BF;">-&gt;</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Matrix</span>
+(<span style="color: #8AAFFA;">!*^</span>)<span style="color: #333333;"> </span>m<span style="color: #333333;"> </span>0<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>m
+(<span style="color: #8AAFFA;">!*^</span>)<span style="color: #333333;"> </span>m<span style="color: #333333;"> </span>i<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>m<span style="color: #333333;"> </span><span style="color: #A197BF;">!*!</span><span style="color: #333333;"> </span>(m<span style="color: #333333;"> </span><span style="color: #A197BF;">!*^</span><span style="color: #333333;"> </span>(i<span style="color: #A197BF;">-</span>1))
+
+<span style="color: #637579;">--</span><span style="color: #333333;"> </span><span style="color: #637579;">Type</span><span style="color: #333333;"> </span><span style="color: #637579;">aliases</span><span style="color: #333333;"> </span><span style="color: #637579;">for</span><span style="color: #333333;"> </span><span style="color: #637579;">vector</span><span style="color: #333333;"> </span><span style="color: #637579;">and</span><span style="color: #333333;"> </span><span style="color: #637579;">matrix</span>
+<span style="color: #FFA070;">type</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Vector</span><span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">V.Vector</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Double</span>
+<span style="color: #FFA070;">type</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Matrix</span><span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">V.Vector</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Vector</span>
+
+<span style="color: #868B44;">--</span><span style="color: #333333;"> </span><span style="color: #868B44;">|</span><span style="color: #333333;"> </span><span style="color: #868B44;">Calculate</span><span style="color: #333333;"> </span><span style="color: #868B44;">the</span><span style="color: #333333;"> </span><span style="color: #868B44;">entropy</span>
+<span style="color: #8AAFFA;">entropy</span><span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Vector</span><span style="color: #333333;"> </span><span style="color: #A197BF;">-&gt;</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Double</span>
+<span style="color: #8AAFFA;">entropy</span><span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>sum<span style="color: #333333;"> </span><span style="color: #A197BF;">.</span><span style="color: #333333;"> </span>V.map<span style="color: #333333;"> </span>(<span style="color: #A197BF;">\</span>p<span style="color: #333333;"> </span><span style="color: #A197BF;">-&gt;</span><span style="color: #333333;"> </span><span style="color: #A197BF;">-</span><span style="color: #333333;"> </span>p<span style="color: #333333;"> </span><span style="color: #A197BF;">*</span><span style="color: #333333;"> </span>log2<span style="color: #333333;"> </span>p)
+
+<span style="color: #868B44;">--</span><span style="color: #333333;"> </span><span style="color: #868B44;">|</span><span style="color: #333333;"> </span><span style="color: #868B44;">Given</span><span style="color: #333333;"> </span><span style="color: #868B44;">matrix</span>
+<span style="color: #8AAFFA;">matrix</span><span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Matrix</span>
+<span style="color: #8AAFFA;">matrix</span><span style="color: #333333;"> </span><span style="color: #A197BF;">=</span>
+<span style="color: #333333;">    </span>V.fromList<span style="color: #333333;"> </span><span style="color: #A197BF;">$</span><span style="color: #333333;"> </span>map<span style="color: #333333;"> </span>V.fromList<span style="color: #333333;"> </span><span style="color: #A197BF;">$</span>
+<span style="color: #333333;">    </span>[[1<span style="color: #A197BF;">/</span>4,<span style="color: #333333;">  </span>0,<span style="color: #333333;"> </span>3<span style="color: #A197BF;">/</span>4],
+<span style="color: #333333;">    </span>[<span style="color: #333333;">  </span>0,<span style="color: #333333;"> </span>1<span style="color: #A197BF;">/</span>4,<span style="color: #333333;"> </span>3<span style="color: #A197BF;">/</span>4],
+<span style="color: #333333;">    </span>[1<span style="color: #A197BF;">/</span>4,<span style="color: #333333;"> </span>1<span style="color: #A197BF;">/</span>2,<span style="color: #333333;"> </span>1<span style="color: #A197BF;">/</span>4]]
+
+<span style="color: #868B44;">--</span><span style="color: #333333;"> </span><span style="color: #868B44;">|</span><span style="color: #333333;"> </span><span style="color: #868B44;">Solution</span><span style="color: #333333;"> </span><span style="color: #868B44;">vector</span><span style="color: #333333;"> </span><span style="color: #868B44;">calculated</span><span style="color: #333333;"> </span><span style="color: #868B44;">from</span><span style="color: #333333;"> </span><span style="color: #868B44;">raising</span><span style="color: #333333;"> </span><span style="color: #868B44;">matrix</span><span style="color: #333333;"> </span><span style="color: #868B44;">E</span><span style="color: #333333;"> </span><span style="color: #868B44;">to</span><span style="color: #333333;"> </span><span style="color: #868B44;">the</span><span style="color: #333333;"> </span><span style="color: #868B44;">power</span>
+<span style="color: #868B44;">--</span><span style="color: #333333;"> </span><span style="color: #868B44;">5000,</span><span style="color: #333333;"> </span><span style="color: #868B44;">takes</span><span style="color: #333333;"> </span><span style="color: #868B44;">0'th</span><span style="color: #333333;"> </span><span style="color: #868B44;">row.</span>
+<span style="color: #8AAFFA;">p</span><span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Vector</span>
+<span style="color: #8AAFFA;">p</span><span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>(matrix<span style="color: #333333;"> </span><span style="color: #A197BF;">!*^</span><span style="color: #333333;"> </span>5000)<span style="color: #333333;"> </span><span style="color: #A197BF;">!</span><span style="color: #333333;"> </span>0
+</pre>
+</div>
+
+<p>
+If printed, value of <code>P</code> is
+<code>[0.16666666666666663,0.3333333333333333,0.5000000000000001]</code>, that
+seems pretty much to convert to the exact solution.
+</p>
+
+<p>
+The entropy of the random source with given probabilities:
+\(H = 1.459147\) (calculated as <code>entropy p</code>).
+</p>
+
+<p>
+Now let's calculate \(H(X|X^∞)\):
+</p>
+
+\begin{align*}
+H(X|X^{∞}) = H(X|X) = - ∑_i P_i ∑_j P_{ij} log(P_ij)
+\end{align*}
+
+<p>
+\(P_ij\) is exactly \(E\). Proof of the first equality can be found in
+the course textbook (1.7, example 1.7.2). The value calculated is
+\(H(X|X^∞) = 1.155639\). Now we are able to compute \(H_n(X)\) using the
+formula in the end of chapter 1.7 of the textbook:
+</p>
+
+\begin{align*}
+H_n(X) = H(X|X^n) + \frac{s}{n}(H_s(X) - H(X|X^s))
+\end{align*}
+
+<p>
+We'll use a fact that \(H(X|X^n)\) equals to \(H(X|X)\) and already
+computed. Plus the markov's chain is simple, so \(s = 1\). Thus
+formula looks like this:
+</p>
+
+\begin{align*}
+H_n(X) = H(X|X) + \frac{1}{n}(H(X) - H(X|X))
+       = 1.1556 + \frac{0.303}{n}
+\end{align*}
+
+<p>
+And so \(H_2 = 1.1556 + 0.303/2 = 1.3071\).
+</p>
+</div>
+</div>
+<div id="outline-container-orgheadline2" class="outline-2">
+<h2 id="orgheadline2"><span class="section-number-2">2</span> Huffman codes</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+Given three words \(a, b, c\) with probabilities \(\frac{1}{6},
+  \frac{1}{3}, \frac{1}{2}\), we can assign the following codes to
+them:
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Word</th>
+<th scope="col" class="org-right">Probability</th>
+<th scope="col" class="org-right">Code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">0.166</td>
+<td class="org-right">01</td>
+</tr>
+
+<tr>
+<td class="org-left">b</td>
+<td class="org-right">0.333</td>
+<td class="org-right">00</td>
+</tr>
+
+<tr>
+<td class="org-left">c</td>
+<td class="org-right">0.5</td>
+<td class="org-right">1</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Then it's easy to see that average amount of bits required to encode
+one word is \(2*0.166+2*0.333+1*0.5 = 1.498\), which is more than
+\(H(X)\). Let's then consider blocks of size 2 and calculate \(P(XY) =
+  P(X)*P(X|Y)\), where second probability is from \(E\):
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Word</th>
+<th scope="col" class="org-right">P(X)</th>
+<th scope="col" class="org-right">P(X!Y)</th>
+<th scope="col" class="org-right">P(XY)</th>
+<th scope="col" class="org-right">Code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">bc</td>
+<td class="org-right">0.333</td>
+<td class="org-right">0.75</td>
+<td class="org-right">0.250</td>
+<td class="org-right">00</td>
+</tr>
+
+<tr>
+<td class="org-left">cb</td>
+<td class="org-right">0.5</td>
+<td class="org-right">0.5</td>
+<td class="org-right">0.250</td>
+<td class="org-right">01</td>
+</tr>
+
+<tr>
+<td class="org-left">ac</td>
+<td class="org-right">0.166</td>
+<td class="org-right">0.75</td>
+<td class="org-right">0.125</td>
+<td class="org-right">101</td>
+</tr>
+
+<tr>
+<td class="org-left">ca</td>
+<td class="org-right">0.5</td>
+<td class="org-right">0.25</td>
+<td class="org-right">0.125</td>
+<td class="org-right">110</td>
+</tr>
+
+<tr>
+<td class="org-left">cc</td>
+<td class="org-right">0.5</td>
+<td class="org-right">0.25</td>
+<td class="org-right">0.125</td>
+<td class="org-right">111</td>
+</tr>
+
+<tr>
+<td class="org-left">bb</td>
+<td class="org-right">0.333</td>
+<td class="org-right">0.25</td>
+<td class="org-right">0.083</td>
+<td class="org-right">1001</td>
+</tr>
+
+<tr>
+<td class="org-left">aa</td>
+<td class="org-right">0.166</td>
+<td class="org-right">0.25</td>
+<td class="org-right">0.042</td>
+<td class="org-right">10001</td>
+</tr>
+
+<tr>
+<td class="org-left">ab</td>
+<td class="org-right">0.166</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">100000</td>
+</tr>
+
+<tr>
+<td class="org-left">ba</td>
+<td class="org-right">0.333</td>
+<td class="org-right">0</td>
+<td class="org-right">0</td>
+<td class="org-right">100001</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+And then average bit amount per word is:
+</p>
+
+\begin{align*}\frac{0.250*2*2 + 0.125*3*3 + 0.083*4+0.042*5}{2} = \frac{2.667}{2} = 1.334\end{align*}
+
+<p>
+, which appears to be more than \(1.498\) that we got in the previous
+attempt. So encoding info in 2 char blocks is more efficient. I
+won't proceed with bigger block sizes because it doesn't provide
+further academic experience.
+</p>
+</div>
+</div>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+<a href="http://neerc.ifmo.ru/wiki/index.php?title=%D0%AD%D1%80%D0%B3%D0%BE%D0%B4%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F_%D0%BC%D0%B0%D1%80%D0%BA%D0%BE%D0%B2%D1%81%D0%BA%D0%B0%D1%8F_%D1%86%D0%B5%D0%BF%D1%8C">http://neerc.ifmo.ru/wiki/index.php?title=%D0%AD%D1%80%D0%B3%D0%BE%D0%B4%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F_%D0%BC%D0%B0%D1%80%D0%BA%D0%BE%D0%B2%D1%81%D0%BA%D0%B0%D1%8F_%D1%86%D0%B5%D0%BF%D1%8C</a>
+</p></div></div>
+
+
+</div>
+</div></div>
+<div id="postamble" class="status">
+<p class="author">Author: Volkhov Mikhail, M3338</p>
+<p class="date">Created: 2016-11-04 Fri 14:18</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

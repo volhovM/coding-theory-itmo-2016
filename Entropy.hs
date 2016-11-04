@@ -13,7 +13,7 @@ import           Data.FileEmbed         (embedFile)
 import qualified Data.Map               as M
 
 file :: ByteString
-file = $(embedFile "/home/volhovm/code/coding-theory/PIC")
+file = $(embedFile "./PIC")
 m = BS.length file
 
 compress :: BSL.ByteString -> BSL.ByteString
@@ -45,6 +45,7 @@ entropy :: Int -> Double
 entropy bSize =
   let dm = distributionMap bSize
       --n = intcast $ sum $ M.elems dm
+      log2 x = log x / log 2
       n = intcast $ m - bSize
       distribution = M.map (\x -> intcast x / n) dm
       entr = negate $ sum $ map (\x -> x * log x) $ M.elems distribution
