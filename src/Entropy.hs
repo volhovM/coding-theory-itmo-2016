@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
-module Main where
+module Entropy where
 
 import           Codec.Compression.GZip (CompressParams (..))
 import qualified Codec.Compression.GZip as Z
@@ -11,6 +11,7 @@ import qualified Data.ByteString        as BS
 import qualified Data.ByteString.Lazy   as BSL
 import           Data.FileEmbed         (embedFile)
 import qualified Data.Map               as M
+import           Prelude
 
 file :: ByteString
 file = $(embedFile "./PIC")
@@ -51,5 +52,5 @@ entropy bSize =
       entr = negate $ sum $ map (\x -> x * log x) $ M.elems distribution
   in entr / intcast bSize
 
-main :: IO ()
-main = forM_ [1..4] $ \i -> putStr (show i ++ ": ") >> print (entropy i)
+testEntropy :: IO ()
+testEntropy = forM_ [1..4] $ \i -> putStr (show i ++ ": ") >> print (entropy i)

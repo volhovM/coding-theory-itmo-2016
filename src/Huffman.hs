@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell  #-}
-module Main (main) where
+
+module Huffman where
 
 import           Control.Lens         (ix, preview, (&), (+~), (^.))
 import           Control.Monad        (forM, forM_)
@@ -18,10 +19,10 @@ import           Data.Vector          ((!))
 import qualified Data.Vector          as V
 import           Linear.Matrix        ((!*!))
 import           Linear.Metric        (dot)
+import           Prelude
 
 log2 :: Double -> Double
 log2 k = log k / log 2
-
 
 -- | This function takes matrix and raises it to the power n.
 -- (!*!) is matrix multiplication.
@@ -67,8 +68,3 @@ hxx =
       case matrix ! i ! j of
         0   -> 0
         pij -> pij * log2 (pij))
-
-
-
-main :: IO ()
-main = undefined
