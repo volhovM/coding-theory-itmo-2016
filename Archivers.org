@@ -1,0 +1,168 @@
+#+LANGUAGE: en
+#+TITLE: Information theory: HW #3 solution
+#+AUTHOR: Volkhov Mikhail, M3338
+
+* Task objectives, format, prerequisites
+  So the task is to implement several algorithms of data compression
+  and provide reports on them. Reports will contain logs from
+  algorithms that will show how it operates this data. Code snippets
+  (in haskell, just for fun), tables with explanation will be
+  attached.
+
+  Proverb correspondent to my task is the following:
+
+  #+BEGIN_QUOTE
+  /Love the heart that hurts you, but never hurt the heart that loves you./
+  #+END_QUOTE
+
+  It's in english that's why i'll stick to utf-8/ascii encoding as
+  byte representation.
+* Two-pass huffman coding
+
+  Here's an implementation:
+  #+BEGIN_SRC haskell
+  newtype Logger w a = Logger
+      { getLogger :: Writer [w] a
+      } deriving (Functor, Applicative, Monad, MonadWriter [w])
+
+  data HuffmanTrace = HuffmanTrace
+      { hCurChar   :: Char
+      , hProb      :: Ratio Int
+      , hCodeWord  :: String
+      , hMsgLength :: Int
+      }
+
+  huffman :: ByteString -> Logger HuffmanTrace ((Map Char (String,Int)),String)
+  huffman input = encode 0 []
+    where
+      encode i s | i >= BS.length input = pure (table1, s)
+      encode i s = do
+          let c = input `BS.index` i
+              (codeWord,m) = table1 M.! c
+              cl = length codeWord
+              s' = s ++ codeWord
+              hProb = m % n
+              hMsgLength = length s'
+          tell $ [HuffmanTrace {hCurChar = c, hCodeWord = codeWord, ..}]
+          encode (i+1) s'
+      n = BS.length input
+      firstPass :: Map Char Int
+      firstPass = BS.foldr' (M.alter (pure . maybe 1 (+1))) M.empty input
+      calcWords :: [(Double,[(Char,String)])]
+      calcWords =
+          map (\(k, x) -> (fromIntegral x / fromIntegral n,[(k,[])])) $ M.assocs firstPass
+      calcCodeWordDo [(p,x)] = assert (p == 1) x
+      calcCodeWordDo ((p0,lefts):(p1,rights):xs) =
+          let append a = map (second (a:))
+          in calcCodeWordDo $ sort $ (p0 + p1, append '0' lefts ++ append '1' rights):xs
+      codeWords :: [(Char, String)]
+      codeWords = calcCodeWordDo $ sort calcWords
+      table1 = M.fromList $ map (\(c,s) -> (c,(s,firstPass M.! c))) codeWords
+  #+END_SRC
+
+  Data produced by first pass gives us this result table:
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 12px; margin-left: 15px;
+  | Char | Code Word | Freq |
+  |------+-----------+------|
+  | ␣    |       111 |   13 |
+  | t    |       110 |   11 |
+  | h    |       011 |    8 |
+  | e    |       010 |    8 |
+  | u    |      1011 |    5 |
+  | r    |      1010 |    5 |
+  | o    |      1001 |    4 |
+  | a    |      0011 |    4 |
+  | v    |      0001 |    3 |
+  | s    |     10001 |    2 |
+  | y    |      0000 |    2 |
+  | n    |    100001 |    1 |
+  | l    |    100000 |    1 |
+  | b    |    001011 |    1 |
+  | L    |    001010 |    1 |
+  | .    |    001001 |    1 |
+  | ,    |    001000 |    1 |
+  |------+-----------+------|
+
+  And the second pass completes encoding:
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 12px; margin-left: 15px;
+  | c | $P(c)$ | Code word | $L(S)$ |
+  |---+--------+-----------+--------|
+  | L | 1/71   |    001010 |      6 |
+  | o | 4/71   |      1001 |     10 |
+  | v | 3/71   |      0001 |     14 |
+  | e | 8/71   |       010 |     17 |
+  |   | 13/71  |       111 |     20 |
+  | t | 11/71  |       110 |     23 |
+  | h | 8/71   |       011 |     26 |
+  | e | 8/71   |       010 |     29 |
+  |   | 13/71  |       111 |     32 |
+  | h | 8/71   |       011 |     35 |
+  | e | 8/71   |       010 |     38 |
+  | a | 4/71   |      0011 |     42 |
+  | r | 5/71   |      1010 |     46 |
+  | t | 11/71  |       110 |     49 |
+  |   | 13/71  |       111 |     52 |
+  | t | 11/71  |       110 |     55 |
+  | h | 8/71   |       011 |     58 |
+  | a | 4/71   |      0011 |     62 |
+  | t | 11/71  |       110 |     65 |
+  |   | 13/71  |       111 |     68 |
+  | h | 8/71   |       011 |     71 |
+  | u | 5/71   |      1011 |     75 |
+  | r | 5/71   |      1010 |     79 |
+  | t | 11/71  |       110 |     82 |
+  | s | 2/71   |     10001 |     87 |
+  |   | 13/71  |       111 |     90 |
+  | y | 2/71   |      0000 |     94 |
+  | o | 4/71   |      1001 |     98 |
+  | u | 5/71   |      1011 |    102 |
+  |   | 1/71   |    001000 |    108 |
+  |   | 13/71  |       111 |    111 |
+  | b | 1/71   |    001011 |    117 |
+  | u | 5/71   |      1011 |    121 |
+  | t | 11/71  |       110 |    124 |
+  |   | 13/71  |       111 |    127 |
+  | n | 1/71   |    100001 |    133 |
+  | e | 8/71   |       010 |    136 |
+  | v | 3/71   |      0001 |    140 |
+  | e | 8/71   |       010 |    143 |
+  | r | 5/71   |      1010 |    147 |
+  |   | 13/71  |       111 |    150 |
+  | h | 8/71   |       011 |    153 |
+  | u | 5/71   |      1011 |    157 |
+  | r | 5/71   |      1010 |    161 |
+  | t | 11/71  |       110 |    164 |
+  |   | 13/71  |       111 |    167 |
+  | t | 11/71  |       110 |    170 |
+  | h | 8/71   |       011 |    173 |
+  | e | 8/71   |       010 |    176 |
+  |   | 13/71  |       111 |    179 |
+  | h | 8/71   |       011 |    182 |
+  | e | 8/71   |       010 |    185 |
+  | a | 4/71   |      0011 |    189 |
+  | r | 5/71   |      1010 |    193 |
+  | t | 11/71  |       110 |    196 |
+  |   | 13/71  |       111 |    199 |
+  | t | 11/71  |       110 |    202 |
+  | h | 8/71   |       011 |    205 |
+  | a | 4/71   |      0011 |    209 |
+  | t | 11/71  |       110 |    212 |
+  |   | 13/71  |       111 |    215 |
+  | l | 1/71   |    100000 |    221 |
+  | o | 4/71   |      1001 |    225 |
+  | v | 3/71   |      0001 |    229 |
+  | e | 8/71   |       010 |    232 |
+  | s | 2/71   |     10001 |    237 |
+  |   | 13/71  |       111 |    240 |
+  | y | 2/71   |      0000 |    244 |
+  | o | 4/71   |      1001 |    248 |
+  | u | 5/71   |      1011 |    252 |
+  | . | 1/71   |    001001 |    258 |
+  |---+--------+-----------+--------|
+
+  Encoded proverb encoded is 258 bits, while data amount needed to
+  transfer huffman tree is:
+
+  \begin{align*}
+  \lceil(
+  \end{align*}
