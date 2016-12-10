@@ -27,6 +27,7 @@ library
                      , lens >=4.14
                      , linear >=1.20
                      , mtl >= 2.2.1
+                     , permutation
                      , text >=1.2
                      , universum
                      , vector >=0.11

@@ -5,9 +5,10 @@
 * Task objectives, format, prerequisites
   So the task is to implement several algorithms of data compression
   and provide reports on them. Reports will contain logs from
-  algorithms that will show how it operates this data. Code snippets
-  (in haskell, just for fun), tables with explanation will be
-  attached.
+  algorithms that will show how it operates this data. Tables with
+  explanation will be attached. I won't attach haskell snippets this
+  time as they became really big and complex. Instead, i'll put a
+  separate pdf with all the code separately. *TODO*
 
   Proverb correspondent to my task is the following:
 
@@ -16,153 +17,123 @@
   #+END_QUOTE
 
   It's in english that's why i'll stick to utf-8/ascii encoding as
-  byte representation.
+  byte representation. It contains $71$ letters, so in general it's
+  $568$ bytes if used without any coding.
 * Two-pass huffman coding
-
-  Here's an implementation:
-  #+BEGIN_SRC haskell
-  newtype Logger w a = Logger
-      { getLogger :: Writer [w] a
-      } deriving (Functor, Applicative, Monad, MonadWriter [w])
-
-  data HuffmanTrace = HuffmanTrace
-      { hCurChar   :: Char
-      , hProb      :: Ratio Int
-      , hCodeWord  :: String
-      , hMsgLength :: Int
-      }
-
-  huffman :: ByteString -> Logger HuffmanTrace ((Map Char (String,Int)),String)
-  huffman input = encode 0 []
-    where
-      encode i s | i >= BS.length input = pure (table1, s)
-      encode i s = do
-          let c = input `BS.index` i
-              (codeWord,m) = table1 M.! c
-              cl = length codeWord
-              s' = s ++ codeWord
-              hProb = m % n
-              hMsgLength = length s'
-          tell $ [HuffmanTrace {hCurChar = c, hCodeWord = codeWord, ..}]
-          encode (i+1) s'
-      n = BS.length input
-      firstPass :: Map Char Int
-      firstPass = BS.foldr' (M.alter (pure . maybe 1 (+1))) M.empty input
-      calcWords :: [(Double,[(Char,String)])]
-      calcWords =
-          map (\(k, x) -> (fromIntegral x / fromIntegral n,[(k,[])])) $ M.assocs firstPass
-      calcCodeWordDo [(p,x)] = assert (p == 1) x
-      calcCodeWordDo ((p0,lefts):(p1,rights):xs) =
-          let append a = map (second (a:))
-          in calcCodeWordDo $ sort $ (p0 + p1, append '0' lefts ++ append '1' rights):xs
-      codeWords :: [(Char, String)]
-      codeWords = calcCodeWordDo $ sort calcWords
-      table1 = M.fromList $ map (\(c,s) -> (c,(s,firstPass M.! c))) codeWords
-  #+END_SRC
-
-  Data produced by first pass gives us this result table:
-  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 12px; margin-left: 15px;
+  I've implemented regural huffman coding, as it can be seen from the
+  first table: code words of the same length are sorted
+  lexicographically:
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; margin-left: 15px;
   | Char | Code Word | Freq |
   |------+-----------+------|
-  | ␣    |       111 |   13 |
-  | t    |       110 |   11 |
-  | h    |       011 |    8 |
+  |      |        00 |   13 |
   | e    |       010 |    8 |
-  | u    |      1011 |    5 |
+  | h    |       011 |    8 |
+  | t    |       100 |   11 |
   | r    |      1010 |    5 |
-  | o    |      1001 |    4 |
-  | a    |      0011 |    4 |
-  | v    |      0001 |    3 |
-  | s    |     10001 |    2 |
-  | y    |      0000 |    2 |
-  | n    |    100001 |    1 |
-  | l    |    100000 |    1 |
-  | b    |    001011 |    1 |
-  | L    |    001010 |    1 |
-  | .    |    001001 |    1 |
-  | ,    |    001000 |    1 |
+  | u    |      1011 |    5 |
+  | s    |     11000 |    2 |
+  | y    |     11001 |    2 |
+  | v    |     11010 |    3 |
+  | a    |     11011 |    4 |
+  | o    |     11100 |    4 |
+  | ,    |    111010 |    1 |
+  | .    |    111011 |    1 |
+  | l    |    111100 |    1 |
+  | n    |    111101 |    1 |
+  | L    |    111110 |    1 |
+  | b    |    111111 |    1 |
   |------+-----------+------|
 
   And the second pass completes encoding:
-  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 12px; margin-left: 15px;
-  | c | $P(c)$ | Code word | $L(S)$ |
-  |---+--------+-----------+--------|
-  | L | 1/71   |    001010 |      6 |
-  | o | 4/71   |      1001 |     10 |
-  | v | 3/71   |      0001 |     14 |
-  | e | 8/71   |       010 |     17 |
-  |   | 13/71  |       111 |     20 |
-  | t | 11/71  |       110 |     23 |
-  | h | 8/71   |       011 |     26 |
-  | e | 8/71   |       010 |     29 |
-  |   | 13/71  |       111 |     32 |
-  | h | 8/71   |       011 |     35 |
-  | e | 8/71   |       010 |     38 |
-  | a | 4/71   |      0011 |     42 |
-  | r | 5/71   |      1010 |     46 |
-  | t | 11/71  |       110 |     49 |
-  |   | 13/71  |       111 |     52 |
-  | t | 11/71  |       110 |     55 |
-  | h | 8/71   |       011 |     58 |
-  | a | 4/71   |      0011 |     62 |
-  | t | 11/71  |       110 |     65 |
-  |   | 13/71  |       111 |     68 |
-  | h | 8/71   |       011 |     71 |
-  | u | 5/71   |      1011 |     75 |
-  | r | 5/71   |      1010 |     79 |
-  | t | 11/71  |       110 |     82 |
-  | s | 2/71   |     10001 |     87 |
-  |   | 13/71  |       111 |     90 |
-  | y | 2/71   |      0000 |     94 |
-  | o | 4/71   |      1001 |     98 |
-  | u | 5/71   |      1011 |    102 |
-  |   | 1/71   |    001000 |    108 |
-  |   | 13/71  |       111 |    111 |
-  | b | 1/71   |    001011 |    117 |
-  | u | 5/71   |      1011 |    121 |
-  | t | 11/71  |       110 |    124 |
-  |   | 13/71  |       111 |    127 |
-  | n | 1/71   |    100001 |    133 |
-  | e | 8/71   |       010 |    136 |
-  | v | 3/71   |      0001 |    140 |
-  | e | 8/71   |       010 |    143 |
-  | r | 5/71   |      1010 |    147 |
-  |   | 13/71  |       111 |    150 |
-  | h | 8/71   |       011 |    153 |
-  | u | 5/71   |      1011 |    157 |
-  | r | 5/71   |      1010 |    161 |
-  | t | 11/71  |       110 |    164 |
-  |   | 13/71  |       111 |    167 |
-  | t | 11/71  |       110 |    170 |
-  | h | 8/71   |       011 |    173 |
-  | e | 8/71   |       010 |    176 |
-  |   | 13/71  |       111 |    179 |
-  | h | 8/71   |       011 |    182 |
-  | e | 8/71   |       010 |    185 |
-  | a | 4/71   |      0011 |    189 |
-  | r | 5/71   |      1010 |    193 |
-  | t | 11/71  |       110 |    196 |
-  |   | 13/71  |       111 |    199 |
-  | t | 11/71  |       110 |    202 |
-  | h | 8/71   |       011 |    205 |
-  | a | 4/71   |      0011 |    209 |
-  | t | 11/71  |       110 |    212 |
-  |   | 13/71  |       111 |    215 |
-  | l | 1/71   |    100000 |    221 |
-  | o | 4/71   |      1001 |    225 |
-  | v | 3/71   |      0001 |    229 |
-  | e | 8/71   |       010 |    232 |
-  | s | 2/71   |     10001 |    237 |
-  |   | 13/71  |       111 |    240 |
-  | y | 2/71   |      0000 |    244 |
-  | o | 4/71   |      1001 |    248 |
-  | u | 5/71   |      1011 |    252 |
-  | . | 1/71   |    001001 |    258 |
-  |---+--------+-----------+--------|
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; margin-left: 15px;
+  | $C$ | $P(C)$  | $Codeword$ | $L(S)$ |
+  |-----+---------+------------+--------|
+  | L   | 1 / 71  |     111110 |      6 |
+  | o   | 4 / 71  |      11100 |     11 |
+  | v   | 3 / 71  |      11010 |     16 |
+  | e   | 8 / 71  |        010 |     19 |
+  |     | 13 / 71 |         00 |     21 |
+  | t   | 11 / 71 |        100 |     24 |
+  | h   | 8 / 71  |        011 |     27 |
+  | e   | 8 / 71  |        010 |     30 |
+  |     | 13 / 71 |         00 |     32 |
+  | h   | 8 / 71  |        011 |     35 |
+  | e   | 8 / 71  |        010 |     38 |
+  | a   | 4 / 71  |      11011 |     43 |
+  | r   | 5 / 71  |       1010 |     47 |
+  | t   | 11 / 71 |        100 |     50 |
+  |     | 13 / 71 |         00 |     52 |
+  | t   | 11 / 71 |        100 |     55 |
+  | h   | 8 / 71  |        011 |     58 |
+  | a   | 4 / 71  |      11011 |     63 |
+  | t   | 11 / 71 |        100 |     66 |
+  |     | 13 / 71 |         00 |     68 |
+  | h   | 8 / 71  |        011 |     71 |
+  | u   | 5 / 71  |       1011 |     75 |
+  | r   | 5 / 71  |       1010 |     79 |
+  | t   | 11 / 71 |        100 |     82 |
+  | s   | 2 / 71  |      11000 |     87 |
+  |     | 13 / 71 |         00 |     89 |
+  | y   | 2 / 71  |      11001 |     94 |
+  | o   | 4 / 71  |      11100 |     99 |
+  | u   | 5 / 71  |       1011 |    103 |
+  | ,   | 1 / 71  |     111010 |    109 |
+  |     | 13 / 71 |         00 |    111 |
+  | b   | 1 / 71  |     111111 |    117 |
+  | u   | 5 / 71  |       1011 |    121 |
+  | t   | 11 / 71 |        100 |    124 |
+  |     | 13 / 71 |         00 |    126 |
+  | n   | 1 / 71  |     111101 |    132 |
+  | e   | 8 / 71  |        010 |    135 |
+  | v   | 3 / 71  |      11010 |    140 |
+  | e   | 8 / 71  |        010 |    143 |
+  | r   | 5 / 71  |       1010 |    147 |
+  |     | 13 / 71 |         00 |    149 |
+  | h   | 8 / 71  |        011 |    152 |
+  | u   | 5 / 71  |       1011 |    156 |
+  | r   | 5 / 71  |       1010 |    160 |
+  | t   | 11 / 71 |        100 |    163 |
+  |     | 13 / 71 |         00 |    165 |
+  | t   | 11 / 71 |        100 |    168 |
+  | h   | 8 / 71  |        011 |    171 |
+  | e   | 8 / 71  |        010 |    174 |
+  |     | 13 / 71 |         00 |    176 |
+  | h   | 8 / 71  |        011 |    179 |
+  | e   | 8 / 71  |        010 |    182 |
+  | a   | 4 / 71  |      11011 |    187 |
+  | r   | 5 / 71  |       1010 |    191 |
+  | t   | 11 / 71 |        100 |    194 |
+  |     | 13 / 71 |         00 |    196 |
+  | t   | 11 / 71 |        100 |    199 |
+  | h   | 8 / 71  |        011 |    202 |
+  | a   | 4 / 71  |      11011 |    207 |
+  | t   | 11 / 71 |        100 |    210 |
+  |     | 13 / 71 |         00 |    212 |
+  | l   | 1 / 71  |     111100 |    218 |
+  | o   | 4 / 71  |      11100 |    223 |
+  | v   | 3 / 71  |      11010 |    228 |
+  | e   | 8 / 71  |        010 |    231 |
+  | s   | 2 / 71  |      11000 |    236 |
+  |     | 13 / 71 |         00 |    238 |
+  | y   | 2 / 71  |      11001 |    243 |
+  | o   | 4 / 71  |      11100 |    248 |
+  | u   | 5 / 71  |       1011 |    252 |
+  | .   | 1 / 71  |     111011 |    258 |
+  |-----+---------+------------+--------|
 
-  Encoded proverb encoded is 258 bits, while data amount needed to
-  transfer huffman tree is:
+  Encoded proverb encoded is $l_2 = 258$ bits, while data amount needed to
+  transfer huffman tree should be calculated manually. First, to
+  transfer the tree itself, it's sufficient to pass only $19$ bits
+  (calculated manually using table 3.3 from the study book).
 
   \begin{align*}
-  \lceil(
+  \lceil\log{\dbinom{256}{1}}\rceil +
+  \lceil\log{\dbinom{255}{3}}\rceil +
+  \lceil\log{\dbinom{254}{2}}\rceil +
+  \lceil\log{\dbinom{253}{5}}\rceil +
+  \lceil\log{\dbinom{252}{6}}\rceil = 117
   \end{align*}
+
+  So totally $l_1 = 19 + 117 = 136$, and total length is $l = l_1+l_2 =
+  394$ bits. Much better than raw $568$ bits.

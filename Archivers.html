@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2016-12-09 Fri 18:41 -->
+<!-- 2016-12-10 Sat 11:18 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="viewport" content="width=device-width, initial-scale=1" />
 <title>Information theory: HW #3 solution</title>
@@ -182,9 +182,10 @@ for the JavaScript code in this tag.
 <p>
 So the task is to implement several algorithms of data compression
 and provide reports on them. Reports will contain logs from
-algorithms that will show how it operates this data. Code snippets
-(in haskell, just for fun), tables with explanation will be
-attached.
+algorithms that will show how it operates this data. Tables with
+explanation will be attached. I won't attach haskell snippets this
+time as they became really big and complex. Instead, i'll put a
+separate pdf with all the code separately. <b>TODO</b>
 </p>
 
 <p>
@@ -199,7 +200,8 @@ Proverb correspondent to my task is the following:
 
 <p>
 It's in english that's why i'll stick to utf-8/ascii encoding as
-byte representation.
+byte representation. It contains \(71\) letters, so in general it's
+\(568\) bytes if used without any coding.
 </p>
 </div>
 </div>
@@ -207,54 +209,11 @@ byte representation.
 <h2 id="orgheadline2"><span class="section-number-2">2</span> Two-pass huffman coding</h2>
 <div class="outline-text-2" id="text-2">
 <p>
-Here's an implementation:
+I've implemented regural huffman coding, as it can be seen from the
+first table: code words of the same length are sorted
+lexicographically:
 </p>
-<div class="org-src-container">
-
-<pre class="src src-haskell"><span style="color: #FFA070;">newtype</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Logger</span><span style="color: #333333;"> </span>w<span style="color: #333333;"> </span>a<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Logger</span>
-<span style="color: #333333;">    </span>{<span style="color: #333333;"> </span>getLogger<span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Writer</span><span style="color: #333333;"> </span>[w]<span style="color: #333333;"> </span>a
-<span style="color: #333333;">    </span>}<span style="color: #333333;"> </span><span style="color: #FFA070;">deriving</span><span style="color: #333333;"> </span>(<span style="color: #EF5C5F;">Functor</span>,<span style="color: #333333;"> </span><span style="color: #EF5C5F;">Applicative</span>,<span style="color: #333333;"> </span><span style="color: #EF5C5F;">Monad</span>,<span style="color: #333333;"> </span><span style="color: #EF5C5F;">MonadWriter</span><span style="color: #333333;"> </span>[w])
-
-<span style="color: #FFA070;">data</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">HuffmanTrace</span><span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">HuffmanTrace</span>
-<span style="color: #333333;">    </span>{<span style="color: #333333;"> </span>hCurChar<span style="color: #333333;">   </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Char</span>
-<span style="color: #333333;">    </span>,<span style="color: #333333;"> </span>hProb<span style="color: #333333;">      </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Ratio</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Int</span>
-<span style="color: #333333;">    </span>,<span style="color: #333333;"> </span>hCodeWord<span style="color: #333333;">  </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">String</span>
-<span style="color: #333333;">    </span>,<span style="color: #333333;"> </span>hMsgLength<span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Int</span>
-<span style="color: #333333;">    </span>}
-
-<span style="color: #8AAFFA;">huffman</span><span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">ByteString</span><span style="color: #333333;"> </span><span style="color: #A197BF;">-&gt;</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Logger</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">HuffmanTrace</span><span style="color: #333333;"> </span>((<span style="color: #EF5C5F;">Map</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Char</span><span style="color: #333333;"> </span>(<span style="color: #EF5C5F;">String</span>,<span style="color: #EF5C5F;">Int</span>)),<span style="color: #EF5C5F;">String</span>)
-<span style="color: #8AAFFA;">huffman</span><span style="color: #333333;"> </span>input<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>encode<span style="color: #333333;"> </span>0<span style="color: #333333;"> </span><span style="color: #EF5C5F;">[]</span>
-<span style="color: #333333;">  </span><span style="color: #FFA070;">where</span>
-<span style="color: #333333;">    </span>encode<span style="color: #333333;"> </span>i<span style="color: #333333;"> </span>s<span style="color: #333333;"> </span><span style="color: #A197BF;">|</span><span style="color: #333333;"> </span>i<span style="color: #333333;"> </span><span style="color: #A197BF;">&gt;=</span><span style="color: #333333;"> </span>BS.length<span style="color: #333333;"> </span>input<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>pure<span style="color: #333333;"> </span>(table1,<span style="color: #333333;"> </span>s)
-<span style="color: #333333;">    </span>encode<span style="color: #333333;"> </span>i<span style="color: #333333;"> </span>s<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span><span style="color: #FFA070;">do</span>
-<span style="color: #333333;">        </span><span style="color: #FFA070;">let</span><span style="color: #333333;"> </span>c<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>input<span style="color: #333333;"> </span><span style="color: #A197BF;">`BS.index`</span><span style="color: #333333;"> </span>i
-<span style="color: #333333;">            </span>(codeWord,m)<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>table1<span style="color: #333333;"> </span><span style="color: #A197BF;">M.!</span><span style="color: #333333;"> </span>c
-<span style="color: #333333;">            </span>cl<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>length<span style="color: #333333;"> </span>codeWord
-<span style="color: #333333;">            </span>s'<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>s<span style="color: #333333;"> </span><span style="color: #A197BF;">++</span><span style="color: #333333;"> </span>codeWord
-<span style="color: #333333;">            </span>hProb<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>m<span style="color: #333333;"> </span><span style="color: #A197BF;">%</span><span style="color: #333333;"> </span>n
-<span style="color: #333333;">            </span>hMsgLength<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>length<span style="color: #333333;"> </span>s'
-<span style="color: #333333;">        </span>tell<span style="color: #333333;"> </span><span style="color: #A197BF;">$</span><span style="color: #333333;"> </span>[<span style="color: #EF5C5F;">HuffmanTrace</span><span style="color: #333333;"> </span>{hCurChar<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>c,<span style="color: #333333;"> </span>hCodeWord<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>codeWord,<span style="color: #333333;"> </span><span style="color: #A197BF;">..</span>}]
-<span style="color: #333333;">        </span>encode<span style="color: #333333;"> </span>(i<span style="color: #A197BF;">+</span>1)<span style="color: #333333;"> </span>s'
-<span style="color: #333333;">    </span>n<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>BS.length<span style="color: #333333;"> </span>input
-<span style="color: #333333;">    </span>firstPass<span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Map</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Char</span><span style="color: #333333;"> </span><span style="color: #EF5C5F;">Int</span>
-<span style="color: #333333;">    </span>firstPass<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>BS.foldr'<span style="color: #333333;"> </span>(M.alter<span style="color: #333333;"> </span>(pure<span style="color: #333333;"> </span><span style="color: #A197BF;">.</span><span style="color: #333333;"> </span>maybe<span style="color: #333333;"> </span>1<span style="color: #333333;"> </span>(<span style="color: #A197BF;">+</span>1)))<span style="color: #333333;"> </span>M.empty<span style="color: #333333;"> </span>input
-<span style="color: #333333;">    </span>calcWords<span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span>[(<span style="color: #EF5C5F;">Double</span>,[(<span style="color: #EF5C5F;">Char</span>,<span style="color: #EF5C5F;">String</span>)])]
-<span style="color: #333333;">    </span>calcWords<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span>
-<span style="color: #333333;">        </span>map<span style="color: #333333;"> </span>(<span style="color: #A197BF;">\</span>(k,<span style="color: #333333;"> </span>x)<span style="color: #333333;"> </span><span style="color: #A197BF;">-&gt;</span><span style="color: #333333;"> </span>(fromIntegral<span style="color: #333333;"> </span>x<span style="color: #333333;"> </span><span style="color: #A197BF;">/</span><span style="color: #333333;"> </span>fromIntegral<span style="color: #333333;"> </span>n,[(k,<span style="color: #EF5C5F;">[]</span>)]))<span style="color: #333333;"> </span><span style="color: #A197BF;">$</span><span style="color: #333333;"> </span>M.assocs<span style="color: #333333;"> </span>firstPass
-<span style="color: #333333;">    </span>calcCodeWordDo<span style="color: #333333;"> </span>[(p,x)]<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>assert<span style="color: #333333;"> </span>(p<span style="color: #333333;"> </span><span style="color: #A197BF;">==</span><span style="color: #333333;"> </span>1)<span style="color: #333333;"> </span>x
-<span style="color: #333333;">    </span>calcCodeWordDo<span style="color: #333333;"> </span>((p0,lefts)<span style="color: #EF5C5F;">:</span>(p1,rights)<span style="color: #EF5C5F;">:</span>xs)<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span>
-<span style="color: #333333;">        </span><span style="color: #FFA070;">let</span><span style="color: #333333;"> </span>append<span style="color: #333333;"> </span>a<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>map<span style="color: #333333;"> </span>(second<span style="color: #333333;"> </span>(a<span style="color: #EF5C5F;">:</span>))
-<span style="color: #333333;">        </span><span style="color: #FFA070;">in</span><span style="color: #333333;"> </span>calcCodeWordDo<span style="color: #333333;"> </span><span style="color: #A197BF;">$</span><span style="color: #333333;"> </span>sort<span style="color: #333333;"> </span><span style="color: #A197BF;">$</span><span style="color: #333333;"> </span>(p0<span style="color: #333333;"> </span><span style="color: #A197BF;">+</span><span style="color: #333333;"> </span>p1,<span style="color: #333333;"> </span>append<span style="color: #333333;"> </span><span style="color: #868B44;">'0'</span><span style="color: #333333;"> </span>lefts<span style="color: #333333;"> </span><span style="color: #A197BF;">++</span><span style="color: #333333;"> </span>append<span style="color: #333333;"> </span><span style="color: #868B44;">'1'</span><span style="color: #333333;"> </span>rights)<span style="color: #EF5C5F;">:</span>xs
-<span style="color: #333333;">    </span>codeWords<span style="color: #333333;"> </span><span style="color: #A197BF;">::</span><span style="color: #333333;"> </span>[(<span style="color: #EF5C5F;">Char</span>,<span style="color: #333333;"> </span><span style="color: #EF5C5F;">String</span>)]
-<span style="color: #333333;">    </span>codeWords<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>calcCodeWordDo<span style="color: #333333;"> </span><span style="color: #A197BF;">$</span><span style="color: #333333;"> </span>sort<span style="color: #333333;"> </span>calcWords
-<span style="color: #333333;">    </span>table1<span style="color: #333333;"> </span><span style="color: #A197BF;">=</span><span style="color: #333333;"> </span>M.fromList<span style="color: #333333;"> </span><span style="color: #A197BF;">$</span><span style="color: #333333;"> </span>map<span style="color: #333333;"> </span>(<span style="color: #A197BF;">\</span>(c,s)<span style="color: #333333;"> </span><span style="color: #A197BF;">-&gt;</span><span style="color: #333333;"> </span>(c,(s,firstPass<span style="color: #333333;"> </span><span style="color: #A197BF;">M.!</span><span style="color: #333333;"> </span>c)))<span style="color: #333333;"> </span>codeWords
-</pre>
-</div>
-
-<p>
-Data produced by first pass gives us this result table:
-</p>
-<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 12px; margin-left: 15px;">
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; margin-left: 15px;">
 
 
 <colgroup>
@@ -273,21 +232,9 @@ Data produced by first pass gives us this result table:
 </thead>
 <tbody>
 <tr>
-<td class="org-left">␣</td>
-<td class="org-right">111</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">00</td>
 <td class="org-right">13</td>
-</tr>
-
-<tr>
-<td class="org-left">t</td>
-<td class="org-right">110</td>
-<td class="org-right">11</td>
-</tr>
-
-<tr>
-<td class="org-left">h</td>
-<td class="org-right">011</td>
-<td class="org-right">8</td>
 </tr>
 
 <tr>
@@ -297,9 +244,15 @@ Data produced by first pass gives us this result table:
 </tr>
 
 <tr>
-<td class="org-left">u</td>
-<td class="org-right">1011</td>
-<td class="org-right">5</td>
+<td class="org-left">h</td>
+<td class="org-right">011</td>
+<td class="org-right">8</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">100</td>
+<td class="org-right">11</td>
 </tr>
 
 <tr>
@@ -309,68 +262,74 @@ Data produced by first pass gives us this result table:
 </tr>
 
 <tr>
-<td class="org-left">o</td>
-<td class="org-right">1001</td>
-<td class="org-right">4</td>
-</tr>
-
-<tr>
-<td class="org-left">a</td>
-<td class="org-right">0011</td>
-<td class="org-right">4</td>
-</tr>
-
-<tr>
-<td class="org-left">v</td>
-<td class="org-right">0001</td>
-<td class="org-right">3</td>
+<td class="org-left">u</td>
+<td class="org-right">1011</td>
+<td class="org-right">5</td>
 </tr>
 
 <tr>
 <td class="org-left">s</td>
-<td class="org-right">10001</td>
+<td class="org-right">11000</td>
 <td class="org-right">2</td>
 </tr>
 
 <tr>
 <td class="org-left">y</td>
-<td class="org-right">0000</td>
+<td class="org-right">11001</td>
 <td class="org-right">2</td>
 </tr>
 
 <tr>
-<td class="org-left">n</td>
-<td class="org-right">100001</td>
-<td class="org-right">1</td>
+<td class="org-left">v</td>
+<td class="org-right">11010</td>
+<td class="org-right">3</td>
 </tr>
 
 <tr>
-<td class="org-left">l</td>
-<td class="org-right">100000</td>
-<td class="org-right">1</td>
+<td class="org-left">a</td>
+<td class="org-right">11011</td>
+<td class="org-right">4</td>
 </tr>
 
 <tr>
-<td class="org-left">b</td>
-<td class="org-right">001011</td>
-<td class="org-right">1</td>
+<td class="org-left">o</td>
+<td class="org-right">11100</td>
+<td class="org-right">4</td>
 </tr>
 
 <tr>
-<td class="org-left">L</td>
-<td class="org-right">001010</td>
+<td class="org-left">,</td>
+<td class="org-right">111010</td>
 <td class="org-right">1</td>
 </tr>
 
 <tr>
 <td class="org-left">.</td>
-<td class="org-right">001001</td>
+<td class="org-right">111011</td>
 <td class="org-right">1</td>
 </tr>
 
 <tr>
-<td class="org-left">,</td>
-<td class="org-right">001000</td>
+<td class="org-left">l</td>
+<td class="org-right">111100</td>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-left">n</td>
+<td class="org-right">111101</td>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-left">L</td>
+<td class="org-right">111110</td>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-left">b</td>
+<td class="org-right">111111</td>
 <td class="org-right">1</td>
 </tr>
 </tbody>
@@ -379,7 +338,7 @@ Data produced by first pass gives us this result table:
 <p>
 And the second pass completes encoding:
 </p>
-<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 12px; margin-left: 15px;">
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; margin-left: 15px;">
 
 
 <colgroup>
@@ -393,517 +352,537 @@ And the second pass completes encoding:
 </colgroup>
 <thead>
 <tr>
-<th scope="col" class="org-left">c</th>
-<th scope="col" class="org-left">\(P(c)\)</th>
-<th scope="col" class="org-right">Code word</th>
+<th scope="col" class="org-left">\(C\)</th>
+<th scope="col" class="org-left">\(P(C)\)</th>
+<th scope="col" class="org-right">\(Codeword\)</th>
 <th scope="col" class="org-right">\(L(S)\)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="org-left">L</td>
-<td class="org-left">1/71</td>
-<td class="org-right">001010</td>
+<td class="org-left">1 / 71</td>
+<td class="org-right">111110</td>
 <td class="org-right">6</td>
 </tr>
 
 <tr>
 <td class="org-left">o</td>
-<td class="org-left">4/71</td>
-<td class="org-right">1001</td>
-<td class="org-right">10</td>
+<td class="org-left">4 / 71</td>
+<td class="org-right">11100</td>
+<td class="org-right">11</td>
 </tr>
 
 <tr>
 <td class="org-left">v</td>
-<td class="org-left">3/71</td>
-<td class="org-right">0001</td>
-<td class="org-right">14</td>
+<td class="org-left">3 / 71</td>
+<td class="org-right">11010</td>
+<td class="org-right">16</td>
 </tr>
 
 <tr>
 <td class="org-left">e</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">010</td>
-<td class="org-right">17</td>
+<td class="org-right">19</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
-<td class="org-right">20</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
+<td class="org-right">21</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
-<td class="org-right">23</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
+<td class="org-right">24</td>
 </tr>
 
 <tr>
 <td class="org-left">h</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">011</td>
-<td class="org-right">26</td>
+<td class="org-right">27</td>
 </tr>
 
 <tr>
 <td class="org-left">e</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">010</td>
-<td class="org-right">29</td>
+<td class="org-right">30</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
 <td class="org-right">32</td>
 </tr>
 
 <tr>
 <td class="org-left">h</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">011</td>
 <td class="org-right">35</td>
 </tr>
 
 <tr>
 <td class="org-left">e</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">010</td>
 <td class="org-right">38</td>
 </tr>
 
 <tr>
 <td class="org-left">a</td>
-<td class="org-left">4/71</td>
-<td class="org-right">0011</td>
-<td class="org-right">42</td>
+<td class="org-left">4 / 71</td>
+<td class="org-right">11011</td>
+<td class="org-right">43</td>
 </tr>
 
 <tr>
 <td class="org-left">r</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1010</td>
-<td class="org-right">46</td>
+<td class="org-right">47</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
-<td class="org-right">49</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
+<td class="org-right">50</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
 <td class="org-right">52</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
 <td class="org-right">55</td>
 </tr>
 
 <tr>
 <td class="org-left">h</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">011</td>
 <td class="org-right">58</td>
 </tr>
 
 <tr>
 <td class="org-left">a</td>
-<td class="org-left">4/71</td>
-<td class="org-right">0011</td>
-<td class="org-right">62</td>
+<td class="org-left">4 / 71</td>
+<td class="org-right">11011</td>
+<td class="org-right">63</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
-<td class="org-right">65</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
+<td class="org-right">66</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
 <td class="org-right">68</td>
 </tr>
 
 <tr>
 <td class="org-left">h</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">011</td>
 <td class="org-right">71</td>
 </tr>
 
 <tr>
 <td class="org-left">u</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1011</td>
 <td class="org-right">75</td>
 </tr>
 
 <tr>
 <td class="org-left">r</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1010</td>
 <td class="org-right">79</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
 <td class="org-right">82</td>
 </tr>
 
 <tr>
 <td class="org-left">s</td>
-<td class="org-left">2/71</td>
-<td class="org-right">10001</td>
+<td class="org-left">2 / 71</td>
+<td class="org-right">11000</td>
 <td class="org-right">87</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
-<td class="org-right">90</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
+<td class="org-right">89</td>
 </tr>
 
 <tr>
 <td class="org-left">y</td>
-<td class="org-left">2/71</td>
-<td class="org-right">0000</td>
+<td class="org-left">2 / 71</td>
+<td class="org-right">11001</td>
 <td class="org-right">94</td>
 </tr>
 
 <tr>
 <td class="org-left">o</td>
-<td class="org-left">4/71</td>
-<td class="org-right">1001</td>
-<td class="org-right">98</td>
+<td class="org-left">4 / 71</td>
+<td class="org-right">11100</td>
+<td class="org-right">99</td>
 </tr>
 
 <tr>
 <td class="org-left">u</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1011</td>
-<td class="org-right">102</td>
+<td class="org-right">103</td>
+</tr>
+
+<tr>
+<td class="org-left">,</td>
+<td class="org-left">1 / 71</td>
+<td class="org-right">111010</td>
+<td class="org-right">109</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">1/71</td>
-<td class="org-right">001000</td>
-<td class="org-right">108</td>
-</tr>
-
-<tr>
-<td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
 <td class="org-right">111</td>
 </tr>
 
 <tr>
 <td class="org-left">b</td>
-<td class="org-left">1/71</td>
-<td class="org-right">001011</td>
+<td class="org-left">1 / 71</td>
+<td class="org-right">111111</td>
 <td class="org-right">117</td>
 </tr>
 
 <tr>
 <td class="org-left">u</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1011</td>
 <td class="org-right">121</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
 <td class="org-right">124</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
-<td class="org-right">127</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
+<td class="org-right">126</td>
 </tr>
 
 <tr>
 <td class="org-left">n</td>
-<td class="org-left">1/71</td>
-<td class="org-right">100001</td>
-<td class="org-right">133</td>
+<td class="org-left">1 / 71</td>
+<td class="org-right">111101</td>
+<td class="org-right">132</td>
 </tr>
 
 <tr>
 <td class="org-left">e</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">010</td>
-<td class="org-right">136</td>
+<td class="org-right">135</td>
 </tr>
 
 <tr>
 <td class="org-left">v</td>
-<td class="org-left">3/71</td>
-<td class="org-right">0001</td>
+<td class="org-left">3 / 71</td>
+<td class="org-right">11010</td>
 <td class="org-right">140</td>
 </tr>
 
 <tr>
 <td class="org-left">e</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">010</td>
 <td class="org-right">143</td>
 </tr>
 
 <tr>
 <td class="org-left">r</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1010</td>
 <td class="org-right">147</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
-<td class="org-right">150</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
+<td class="org-right">149</td>
 </tr>
 
 <tr>
 <td class="org-left">h</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">011</td>
-<td class="org-right">153</td>
+<td class="org-right">152</td>
 </tr>
 
 <tr>
 <td class="org-left">u</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1011</td>
-<td class="org-right">157</td>
+<td class="org-right">156</td>
 </tr>
 
 <tr>
 <td class="org-left">r</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1010</td>
-<td class="org-right">161</td>
+<td class="org-right">160</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
-<td class="org-right">164</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
+<td class="org-right">163</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
-<td class="org-right">167</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
+<td class="org-right">165</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
-<td class="org-right">170</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
+<td class="org-right">168</td>
 </tr>
 
 <tr>
 <td class="org-left">h</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">011</td>
-<td class="org-right">173</td>
+<td class="org-right">171</td>
 </tr>
 
 <tr>
 <td class="org-left">e</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">010</td>
+<td class="org-right">174</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
 <td class="org-right">176</td>
 </tr>
 
 <tr>
-<td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
+<td class="org-left">h</td>
+<td class="org-left">8 / 71</td>
+<td class="org-right">011</td>
 <td class="org-right">179</td>
 </tr>
 
 <tr>
-<td class="org-left">h</td>
-<td class="org-left">8/71</td>
-<td class="org-right">011</td>
+<td class="org-left">e</td>
+<td class="org-left">8 / 71</td>
+<td class="org-right">010</td>
 <td class="org-right">182</td>
 </tr>
 
 <tr>
-<td class="org-left">e</td>
-<td class="org-left">8/71</td>
-<td class="org-right">010</td>
-<td class="org-right">185</td>
-</tr>
-
-<tr>
 <td class="org-left">a</td>
-<td class="org-left">4/71</td>
-<td class="org-right">0011</td>
-<td class="org-right">189</td>
+<td class="org-left">4 / 71</td>
+<td class="org-right">11011</td>
+<td class="org-right">187</td>
 </tr>
 
 <tr>
 <td class="org-left">r</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1010</td>
-<td class="org-right">193</td>
+<td class="org-right">191</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
+<td class="org-right">194</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
 <td class="org-right">196</td>
 </tr>
 
 <tr>
-<td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
+<td class="org-left">t</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
 <td class="org-right">199</td>
 </tr>
 
 <tr>
-<td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
+<td class="org-left">h</td>
+<td class="org-left">8 / 71</td>
+<td class="org-right">011</td>
 <td class="org-right">202</td>
 </tr>
 
 <tr>
-<td class="org-left">h</td>
-<td class="org-left">8/71</td>
-<td class="org-right">011</td>
-<td class="org-right">205</td>
-</tr>
-
-<tr>
 <td class="org-left">a</td>
-<td class="org-left">4/71</td>
-<td class="org-right">0011</td>
-<td class="org-right">209</td>
+<td class="org-left">4 / 71</td>
+<td class="org-right">11011</td>
+<td class="org-right">207</td>
 </tr>
 
 <tr>
 <td class="org-left">t</td>
-<td class="org-left">11/71</td>
-<td class="org-right">110</td>
+<td class="org-left">11 / 71</td>
+<td class="org-right">100</td>
+<td class="org-right">210</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
 <td class="org-right">212</td>
 </tr>
 
 <tr>
-<td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
-<td class="org-right">215</td>
-</tr>
-
-<tr>
 <td class="org-left">l</td>
-<td class="org-left">1/71</td>
-<td class="org-right">100000</td>
-<td class="org-right">221</td>
+<td class="org-left">1 / 71</td>
+<td class="org-right">111100</td>
+<td class="org-right">218</td>
 </tr>
 
 <tr>
 <td class="org-left">o</td>
-<td class="org-left">4/71</td>
-<td class="org-right">1001</td>
-<td class="org-right">225</td>
+<td class="org-left">4 / 71</td>
+<td class="org-right">11100</td>
+<td class="org-right">223</td>
 </tr>
 
 <tr>
 <td class="org-left">v</td>
-<td class="org-left">3/71</td>
-<td class="org-right">0001</td>
-<td class="org-right">229</td>
+<td class="org-left">3 / 71</td>
+<td class="org-right">11010</td>
+<td class="org-right">228</td>
 </tr>
 
 <tr>
 <td class="org-left">e</td>
-<td class="org-left">8/71</td>
+<td class="org-left">8 / 71</td>
 <td class="org-right">010</td>
-<td class="org-right">232</td>
+<td class="org-right">231</td>
 </tr>
 
 <tr>
 <td class="org-left">s</td>
-<td class="org-left">2/71</td>
-<td class="org-right">10001</td>
-<td class="org-right">237</td>
+<td class="org-left">2 / 71</td>
+<td class="org-right">11000</td>
+<td class="org-right">236</td>
 </tr>
 
 <tr>
 <td class="org-left">&#xa0;</td>
-<td class="org-left">13/71</td>
-<td class="org-right">111</td>
-<td class="org-right">240</td>
+<td class="org-left">13 / 71</td>
+<td class="org-right">00</td>
+<td class="org-right">238</td>
 </tr>
 
 <tr>
 <td class="org-left">y</td>
-<td class="org-left">2/71</td>
-<td class="org-right">0000</td>
-<td class="org-right">244</td>
+<td class="org-left">2 / 71</td>
+<td class="org-right">11001</td>
+<td class="org-right">243</td>
 </tr>
 
 <tr>
 <td class="org-left">o</td>
-<td class="org-left">4/71</td>
-<td class="org-right">1001</td>
+<td class="org-left">4 / 71</td>
+<td class="org-right">11100</td>
 <td class="org-right">248</td>
 </tr>
 
 <tr>
 <td class="org-left">u</td>
-<td class="org-left">5/71</td>
+<td class="org-left">5 / 71</td>
 <td class="org-right">1011</td>
 <td class="org-right">252</td>
 </tr>
 
 <tr>
 <td class="org-left">.</td>
-<td class="org-left">1/71</td>
-<td class="org-right">001001</td>
+<td class="org-left">1 / 71</td>
+<td class="org-right">111011</td>
 <td class="org-right">258</td>
 </tr>
 </tbody>
 </table>
+
+<p>
+Encoded proverb encoded is \(l_2 = 258\) bits, while data amount needed to
+transfer huffman tree should be calculated manually. First, to
+transfer the tree itself, it's sufficient to pass only \(19\) bits
+(calculated manually using table 3.3 from the study book).
+</p>
+
+\begin{align*}
+\lceil\log{\dbinom{256}{1}}\rceil +
+\lceil\log{\dbinom{255}{3}}\rceil +
+\lceil\log{\dbinom{254}{2}}\rceil +
+\lceil\log{\dbinom{253}{5}}\rceil +
+\lceil\log{\dbinom{252}{6}}\rceil = 117
+\end{align*}
+
+<p>
+So totally \(l_1 = 19 + 117 = 136\), and total length is \(l = l_1+l_2 =
+  394\) bits. Much better than raw \(568\) bits.
+</p>
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Volkhov Mikhail, M3338</p>
-<p class="date">Created: 2016-12-09 Fri 18:41</p>
+<p class="date">Created: 2016-12-10 Sat 11:18</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
