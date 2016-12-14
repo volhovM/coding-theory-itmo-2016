@@ -1,5 +1,7 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE ViewPatterns        #-}
 
 -- | Homework 3
 
@@ -7,15 +9,19 @@ module Archivers where
 
 import qualified Base                  as B (Show (..))
 import           Control.Exception     (assert)
+import           Control.Lens          (makeLenses, use, uses, (%=), (.=), (<>=))
 import           Control.Monad.Writer  (MonadWriter, Writer, runWriter, tell)
 import           Data.Bifunctor        (second)
-import           Data.ByteString.Char8 (ByteString)
-import qualified Data.ByteString.Char8 as BS
-import           Data.List             (dropWhileEnd)
+import           Data.Bits             (testBit)
+import qualified Data.ByteString       as BS
+import qualified Data.ByteString.Char8 as BSC
+import           Data.List             (dropWhileEnd, nub)
 import qualified Data.Map.Strict       as M
+import           Data.Number.BigFloat  (BigFloat (..), Prec50, PrecPlus20)
 import           Data.Ord              (comparing)
 import           Data.Ratio            ((%))
 import qualified Data.Text             as T
+import           Data.Word             (Word16)
 import           Universum             hiding ((%))
 
 type String = [Char]
@@ -23,7 +29,7 @@ type String = [Char]
 dropEnd :: Int -> [a] -> [a]
 dropEnd i xs = take (length xs - i) xs
 
-log2 :: Double -> Double
+log2 :: Floating a => a -> a
 log2 k = log k / log 2
 
 proverb :: ByteString
@@ -34,6 +40,10 @@ proverb =
 newtype Logger w a = Logger
     { getLogger :: Writer [w] a
     } deriving (Functor, Applicative, Monad, MonadWriter [w])
+
+----------------------------------------------------------------------------
+-- Huffman
+----------------------------------------------------------------------------
 
 data HuffmanTrace = HuffmanTrace
     { hCurChar   :: Char
@@ -48,12 +58,12 @@ instance Show HuffmanTrace where
             "|"
             [[hCurChar], show hProb, hCodeWord, show hMsgLength]
 
-huffman :: ByteString -> Logger HuffmanTrace ((Map Char (String,Int)),String)
+huffman :: BSC.ByteString -> Logger HuffmanTrace ((Map Char (String,Int)),String)
 huffman input = encode 0 []
   where
-    encode i s | i >= BS.length input = pure (table1, s)
+    encode i s | i >= BSC.length input = pure (table1, s)
     encode i s = do
-        let c = input `BS.index` i
+        let c = input `BSC.index` i
             (codeWord,m) = table1 M.! c
             cl = length codeWord
             s' = s ++ codeWord
@@ -61,9 +71,9 @@ huffman input = encode 0 []
             hMsgLength = length s'
         tell $ [HuffmanTrace {hCurChar = c, hCodeWord = codeWord, ..}]
         encode (i+1) s'
-    n = BS.length input
+    n = BSC.length input
     firstPass :: Map Char Int
-    firstPass = BS.foldr' (M.alter (pure . maybe 1 (+1))) M.empty input
+    firstPass = BSC.foldr' (M.alter (pure . maybe 1 (+1))) M.empty input
     calcWords :: [(Double,[(Char,Int)])]
     calcWords =
         map (\(k, x) -> (fromIntegral x / fromIntegral n,[(k,0)])) $ M.assocs firstPass
@@ -86,3 +96,87 @@ runHuffman x = do
     let ((tbl1, str), tbl2) = runWriter $ getLogger $ huffman x
     forM_ (M.assocs tbl1) print
     forM_ tbl2 print
+
+
+----------------------------------------------------------------------------
+-- Adaptive arithmetic fixed precision
+----------------------------------------------------------------------------
+
+data ArithmState = ArithmState
+    { _aLow     :: Word16
+    , _aHigh    :: Word16
+    , _aWord    :: [Bool]
+    , _aLetters :: [Word8]
+    }
+
+makeLenses ''ArithmState
+
+data ArithmTrace = ArithmTrace
+    { aCurChar   :: Char
+    , aProb      :: Double
+    , aCodeWord  :: String
+    , aMsgLength :: Int
+    } deriving Show
+
+type ArithM a = StateT ArithmState (Writer [ArithmTrace]) a
+
+
+convertToBits :: (Bits a) => a -> Int -> [Bool]
+convertToBits x i = reverse $ map (\i -> testBit x i) [0 .. i-1]
+
+arithmStep :: Map Word8 Double -> Word8 -> ArithM ()
+arithmStep prob w = do
+    low <- use aLow
+    (delta :: Double) <- uses aHigh $ fromIntegral . (\x -> x - low)
+    let letter = bool 0xff w (M.member w prob) -- choose escape if not present
+        p, p' :: Word16
+        p = round $
+            delta *
+            M.foldrWithKey
+                (\w' pr acc -> bool acc (acc + pr) (w' < letter))
+                0.0
+                prob
+        p' = p + round (delta * prob M.! letter)
+        matches =
+            maximum $
+            filter
+                (\i -> all (\j -> testBit p j == testBit p' j) [0 .. i - 1])
+                [0 .. 15]
+        sameBits = map (testBit p) [0 .. matches - 1]
+        low', high' :: Word16
+        low' = shiftL p (16 - matches)
+        high' =
+            let s = shiftL p' (16 - matches)
+            in s .|. (s - 1)
+    traceShowM p
+    traceShowM p'
+    traceShowM matches
+    traceShowM sameBits
+    traceShowM low'
+    traceShowM high'
+    aLow .= low'
+    aHigh .= high'
+    aWord <>= sameBits
+    aLetters %= (letter:)
+    l <- uses aWord length
+    tell $ [ArithmTrace (chr' letter) (prob M.! letter) "TODO" l]
+
+    newLetters <- uses aLetters $ \letters -> filter (not . (`elem` letters)) [0..0xff]
+    let probWithEscape =
+            M.fromList $ map (\i -> (i, 1/(fromIntegral $ length newLetters))) newLetters
+    when (letter /= w) $ arithmStep probWithEscape w
+  where
+    chr' 0xff = '\\'
+    chr' x    = chr $ fromIntegral x
+
+runAdaptiveArithm :: ByteString -> ArithM ()
+runAdaptiveArithm input = forM_ [0..BS.length input] $ \k -> do
+    letters <- use aLetters
+    let n = fromIntegral $ length letters
+        probM = M.fromList $
+            map (second (/(n+1))) $
+            (0xff, 1):
+            (map (\l -> (l, fromIntegral $ length $ filter (==l) letters)) $ nub letters)
+    arithmStep probM $ BS.index input k
+
+execAdaptiveArithm x = runWriter $ (runStateT (runAdaptiveArithm x) (ArithmState 0 0xffff [] []))
