@@ -140,7 +140,8 @@
 
 * Adaptive arithmetic coding
   Implementation uses renormalization together with fixed-point
-  precision arithmetics (16 bits words).
+  precision arithmetics (16 bits words). Algorithm "A" from textbook
+  is used (has $n+1$ in denominator).
 
   Here is the table algorithm outputs (backslash stands for escape
   symbol):
@@ -247,7 +248,46 @@
   spaces in third column mean that interval didn't satisfy this
   property. So eventually it took $372$ bits to encode the proverb,
   better than huffman.
+* Enumerative
+  First of all I emphasize that no /real encoder/ will be implemented,
+  i'll just present here an estimate on how much information will it
+  take. Enumerative encoding implementation seems complex and
+  impractical to do.
 
+  Here's the main function that calculates length of the input.
+  #+BEGIN_SRC haskell
+  enumerative :: BS.ByteString -> Integer
+  enumerative input = l1 + l2
+    where
+      n = fromIntegral $ BS.length input
+      chars = BS.unpack input
+      unique = nub chars
+      occurences =
+          M.fromList $
+          map (\i -> (i, fromIntegral $ length $ filter (== i) chars)) unique
+      comp, compcomp, comp' :: [Integer]
+      comp = reverse $
+             sort $ map (\i -> fromMaybe 0 $ M.lookup i occurences) [0 .. 0xff]
+      m = length comp
+      compcomp = map (fromIntegral . length) $ group comp
+      comp' = filter (> 0) comp
+      l2 = ceiling $
+           log2' $ foldr (\x acc -> acc `div` (factorial x)) (factorial n) comp'
+      l11 = ceiling $ log2' $ n * product comp'
+      l12 = ceiling $
+            log2' $
+            foldr (\x acc -> acc `div` (factorial x))
+                  (factorial $ fromIntegral $ length comp)
+                  compcomp
+      l1 = l11 + l12
+  #+END_SRC
+
+  First sorted composition: $\tau =
+  (13,11,8,8,5,5,4,4,3,2,2,1,1,1,1,1,1,0,0,..,0,0)$. Composition of
+  composition $\tau' = (1,1,2,2,2,1,2,6,239)$. Length of the
+  composition $l_1 = 154$, number of the proverb in list of strings
+  with this composition $l_2 = 223$. Total information needed to
+  transmit the string: $l = l_1+l_2 = 377$ bits.
 * Footnotes
 [fn:1] https://en.wikipedia.org/wiki/Arithmetic_coding#Precision_and_renormalization
 [fn:2] http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf

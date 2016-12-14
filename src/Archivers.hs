@@ -34,6 +34,7 @@ dropEnd i xs = take (length xs - i) xs
 
 log2 :: Floating a => a -> a
 log2 k = log k / log 2
+log2' = log2 . fromIntegral
 
 proverb :: ByteString
 proverb =
@@ -197,3 +198,37 @@ runAdaptiveArithm input = do
     finalizeArith
 
 execAdaptiveArithm x = runWriter $ (runStateT (runAdaptiveArithm x) (ArithmState 0 0xffff [] []))
+
+----------------------------------------------------------------------------
+-- Enumerative
+----------------------------------------------------------------------------
+
+factorial :: Integer -> Integer
+factorial 1 = 1
+factorial 0 = 1
+factorial x = x * factorial (x-1)
+
+enumerative :: BS.ByteString -> Integer
+enumerative input = l1+l2
+  where
+    n = fromIntegral $ BS.length input
+    chars = BS.unpack input
+    unique = nub chars
+    occurences =
+        M.fromList $
+        map (\i -> (i, fromIntegral $ length $ filter (== i) chars)) unique
+    comp, compcomp, comp' :: [Integer]
+    comp = reverse $
+           sort $ map (\i -> fromMaybe 0 $ M.lookup i occurences) [0 .. 0xff]
+    m = length comp
+    compcomp = map (fromIntegral . length) $ group comp
+    comp' = filter (> 0) comp
+    l2 = ceiling $
+         log2' $ foldr (\x acc -> acc `div` (factorial x)) (factorial n) comp'
+    l11 = ceiling $ log2' $ n * product comp'
+    l12 = ceiling $
+          log2' $
+          foldr (\x acc -> acc `div` (factorial x))
+                (factorial $ fromIntegral $ length comp)
+                compcomp
+    l1 = l11 + l12
