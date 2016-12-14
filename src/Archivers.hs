@@ -1,11 +1,13 @@
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ViewPatterns        #-}
 
 -- | Homework 3
 
-module Archivers where
+module Archivers () where
 
 import qualified Base                  as B (Show (..))
 import           Control.Exception     (assert)
@@ -22,6 +24,7 @@ import           Data.Ord              (comparing)
 import           Data.Ratio            ((%))
 import qualified Data.Text             as T
 import           Data.Word             (Word16)
+import           Numeric               (showGFloat)
 import           Universum             hiding ((%))
 
 type String = [Char]
@@ -112,14 +115,19 @@ data ArithmState = ArithmState
 makeLenses ''ArithmState
 
 data ArithmTrace = ArithmTrace
-    { aCurChar   :: Char
+    { aCurChar   :: [Char]
     , aProb      :: Double
     , aCodeWord  :: String
     , aMsgLength :: Int
-    } deriving Show
+    }
 
 type ArithM a = StateT ArithmState (Writer [ArithmTrace]) a
 
+instance Show ArithmTrace where
+    show ArithmTrace {..} =
+        intercalate
+            "|"
+            [aCurChar, showGFloat (Just 4) aProb "", aCodeWord, show aMsgLength]
 
 convertToBits :: (Bits a) => a -> Int -> [Bool]
 convertToBits x i = reverse $ map (\i -> testBit x i) [0 .. i-1]
@@ -138,28 +146,22 @@ arithmStep prob w = do
                 prob
         p' = p + round (delta * prob M.! letter)
         matches =
-            maximum $
+            maximum $ 0 :
             filter
-                (\i -> all (\j -> testBit p j == testBit p' j) [0 .. i - 1])
-                [0 .. 15]
-        sameBits = map (testBit p) [0 .. matches - 1]
+                (\i -> all (\j -> testBit p j == testBit p' j) [16-i .. 15])
+                [1 .. 16]
+        sameBits = take matches $ convertToBits p 16
         low', high' :: Word16
-        low' = shiftL p (16 - matches)
-        high' =
-            let s = shiftL p' (16 - matches)
-            in s .|. (s - 1)
-    traceShowM p
-    traceShowM p'
-    traceShowM matches
-    traceShowM sameBits
-    traceShowM low'
-    traceShowM high'
+        low' = shiftL p matches
+        high' | matches == 0 = p'
+              | otherwise = let s = shiftL p' matches
+                            in s .|. (s - 1)
     aLow .= low'
     aHigh .= high'
     aWord <>= sameBits
     aLetters %= (letter:)
     l <- uses aWord length
-    tell $ [ArithmTrace (chr' letter) (prob M.! letter) "TODO" l]
+    tell $ [ArithmTrace [chr' letter] (prob M.! letter) (map (bool '0' '1') sameBits) l]
 
     newLetters <- uses aLetters $ \letters -> filter (not . (`elem` letters)) [0..0xff]
     let probWithEscape =
@@ -169,14 +171,29 @@ arithmStep prob w = do
     chr' 0xff = '\\'
     chr' x    = chr $ fromIntegral x
 
+finalizeArith :: ArithM ()
+finalizeArith = do
+    high <- uses aHigh fromIntegral
+    low <- uses aLow fromIntegral
+    let delta, deltaP :: Double
+        delta = high - low
+        deltaP = delta / 0xffff
+        bits = take (ceiling (- (log2 $ deltaP))) $
+            convertToBits @Word16 (round $ low + delta / 2) 16
+    aWord <>= bits
+    l <- uses aWord length
+    tell $ [ArithmTrace "final" 0 (map (bool '0' '1') bits) l]
+
 runAdaptiveArithm :: ByteString -> ArithM ()
-runAdaptiveArithm input = forM_ [0..BS.length input] $ \k -> do
-    letters <- use aLetters
-    let n = fromIntegral $ length letters
-        probM = M.fromList $
-            map (second (/(n+1))) $
-            (0xff, 1):
-            (map (\l -> (l, fromIntegral $ length $ filter (==l) letters)) $ nub letters)
-    arithmStep probM $ BS.index input k
+runAdaptiveArithm input = do
+    forM_ [0..BS.length input-1] $ \k -> do
+        letters <- use aLetters
+        let n = fromIntegral $ length letters
+            probM = M.fromList $
+                map (second (/(n+1))) $
+                (0xff, 1):
+                (map (\l -> (l, fromIntegral $ length $ filter (==l) letters)) $ nub letters)
+        arithmStep probM $ BS.index input k
+    finalizeArith
 
 execAdaptiveArithm x = runWriter $ (runStateT (runAdaptiveArithm x) (ArithmState 0 0xffff [] []))

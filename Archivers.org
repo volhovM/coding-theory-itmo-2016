@@ -137,3 +137,117 @@
 
   So totally $l_1 = 19 + 117 = 136$, and total length is $l = l_1+l_2 =
   394$ bits. Much better than raw $568$ bits.
+
+* Adaptive arithmetic coding
+  Implementation uses renormalization together with fixed-point
+  precision arithmetics (16 bits words).
+
+  Here is the table algorithm outputs (backslash stands for escape
+  symbol):
+
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; margin-left: 15px;
+  | $C$   |    $P(C)$ | $Codeword$ | $L(S)$ |
+  |-------+-----------+------------+--------|
+  | \     |    1.0000 |            |      0 |
+  | L     | 3.9216e-3 |    0100110 |      7 |
+  | \     |    0.3333 |          0 |      8 |
+  | o     | 3.9370e-3 |    0010011 |     15 |
+  | \     |    0.4000 |         00 |     17 |
+  | v     | 3.9526e-3 |     001000 |     23 |
+  | \     |    0.4286 |        000 |     26 |
+  | e     | 3.9683e-3 |  001000001 |     35 |
+  | \     |    0.4444 |            |     35 |
+  |       | 3.9841e-3 |  000010011 |     44 |
+  | \     |    0.4545 |            |     44 |
+  | t     | 4.0000e-3 |   00011111 |     52 |
+  | \     |    0.4615 |          0 |     53 |
+  | h     | 4.0161e-3 |   00011100 |     61 |
+  | e     | 6.6667e-2 |      00001 |     66 |
+  |       | 6.2500e-2 |       0000 |     70 |
+  | h     | 5.8824e-2 |        001 |     73 |
+  | e     |    0.1111 |        000 |     76 |
+  | \     |    0.3684 |        001 |     79 |
+  | a     | 4.0323e-3 |      01001 |     84 |
+  | \     |    0.3810 |        000 |     87 |
+  | r     | 4.0486e-3 |  001000100 |     96 |
+  | t     | 4.3478e-2 |        010 |     99 |
+  |       | 8.3333e-2 |      00000 |    104 |
+  | t     | 8.0000e-2 |        010 |    107 |
+  | h     | 7.6923e-2 |         00 |    109 |
+  | a     | 3.7037e-2 |    0000010 |    116 |
+  | t     |    0.1071 |        010 |    119 |
+  |       |    0.1034 |       0000 |    123 |
+  | h     |    0.1000 |        010 |    126 |
+  | \     |    0.2903 |            |    126 |
+  | u     | 4.0650e-3 |   00010101 |    134 |
+  | r     | 3.0303e-2 |     000110 |    140 |
+  | t     |    0.1176 |          0 |    141 |
+  | \     |    0.2857 |       0001 |    145 |
+  | s     | 4.0816e-3 |     001100 |    151 |
+  |       |    0.1081 |     000000 |    157 |
+  | \     |    0.2895 |          1 |    158 |
+  | y     | 4.0984e-3 |     001101 |    164 |
+  | o     | 2.5000e-2 |      00001 |    169 |
+  | u     | 2.4390e-2 |        000 |    172 |
+  | \     |    0.2857 |      00000 |    177 |
+  | ,     | 4.1152e-3 | 0000100011 |    187 |
+  |       |    0.1136 |        000 |    190 |
+  | \     |    0.2889 |          1 |    191 |
+  | b     | 4.1322e-3 |     001011 |    197 |
+  | u     | 4.2553e-2 |      00010 |    202 |
+  | t     |    0.1042 |       0001 |    206 |
+  |       |    0.1224 |       0000 |    210 |
+  | \     |    0.2800 |            |    210 |
+  | n     | 4.1494e-3 |    0001000 |    217 |
+  | e     | 5.7692e-2 |     000001 |    223 |
+  | v     | 1.8868e-2 |    0011100 |    230 |
+  | e     | 7.4074e-2 |        001 |    233 |
+  | r     | 3.6364e-2 |       0011 |    237 |
+  |       |    0.1250 |       0000 |    241 |
+  | h     | 7.0175e-2 |        001 |    244 |
+  | u     | 5.1724e-2 |      00110 |    249 |
+  | r     | 5.0847e-2 |         01 |    251 |
+  | t     |    0.1000 |       0001 |    255 |
+  |       |    0.1311 |       0000 |    259 |
+  | t     |    0.1129 |        010 |    262 |
+  | h     | 7.9365e-2 |       0010 |    266 |
+  | e     | 7.8125e-2 |       0010 |    270 |
+  |       |    0.1385 |        000 |    273 |
+  | h     | 9.0909e-2 |        010 |    276 |
+  | e     | 8.9552e-2 |        001 |    279 |
+  | a     | 2.9412e-2 |      00010 |    284 |
+  | r     | 5.7971e-2 |       0011 |    288 |
+  | t     |    0.1143 |          0 |    289 |
+  |       |    0.1408 |     000000 |    295 |
+  | t     |    0.1250 |            |    295 |
+  | h     | 9.5890e-2 |     000010 |    301 |
+  | a     | 4.0541e-2 |         00 |    303 |
+  | t     |    0.1333 |        000 |    306 |
+  |       |    0.1447 |     000000 |    312 |
+  | \     |    0.1948 |         11 |    314 |
+  | l     | 4.1667e-3 |    0101001 |    321 |
+  | o     | 2.5316e-2 |     001100 |    327 |
+  | v     | 2.5000e-2 |      10000 |    332 |
+  | e     | 8.6420e-2 |       0010 |    336 |
+  | s     | 1.2195e-2 |     011010 |    342 |
+  |       |    0.1446 |        000 |    345 |
+  | y     | 1.1905e-2 |       1000 |    349 |
+  | o     | 3.5294e-2 |    0000111 |    356 |
+  | u     | 4.6512e-2 |      01101 |    361 |
+  | \     |    0.1839 |          1 |    362 |
+  | .     | 4.1841e-3 |  000011110 |    371 |
+  |-------+-----------+------------+--------|
+  | final |           |          1 |    372 |
+
+  On every step algorithm saves 16-digit high and low variables. If
+  the interval we go into is small enough that new bounds share most
+  significant bits, we put them on the wire. This algorithm is
+  decribed both in textbook and on wikipedia[fn:1] and also in Amir
+  Said's article "Introduction to Arithmetic Coding"[fn:2]. Thus empty
+  spaces in third column mean that interval didn't satisfy this
+  property. So eventually it took $372$ bits to encode the proverb,
+  better than huffman.
+
+* Footnotes
+[fn:1] https://en.wikipedia.org/wiki/Arithmetic_coding#Precision_and_renormalization
+[fn:2] http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf

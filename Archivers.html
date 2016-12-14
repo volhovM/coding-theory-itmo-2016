@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2016-12-10 Sat 11:18 -->
+<!-- 2016-12-14 Wed 14:02 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="viewport" content="width=device-width, initial-scale=1" />
 <title>Information theory: HW #3 solution</title>
@@ -172,6 +172,7 @@ for the JavaScript code in this tag.
 <ul>
 <li><a href="#orgheadline1">1. Task objectives, format, prerequisites</a></li>
 <li><a href="#orgheadline2">2. Two-pass huffman coding</a></li>
+<li><a href="#orgheadline3">3. Adaptive arithmetic coding</a></li>
 </ul>
 </div>
 </div>
@@ -879,10 +880,697 @@ So totally \(l_1 = 19 + 117 = 136\), and total length is \(l = l_1+l_2 =
 </p>
 </div>
 </div>
+
+<div id="outline-container-orgheadline3" class="outline-2">
+<h2 id="orgheadline3"><span class="section-number-2">3</span> Adaptive arithmetic coding</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+Implementation uses renormalization together with fixed-point
+precision arithmetics (16 bits words).
+</p>
+
+<p>
+Here is the table algorithm outputs (backslash stands for escape
+symbol):
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; margin-left: 15px;">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">\(C\)</th>
+<th scope="col" class="org-right">\(P(C)\)</th>
+<th scope="col" class="org-right">\(Codeword\)</th>
+<th scope="col" class="org-right">\(L(S)\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">1.0000</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+</tr>
+
+<tr>
+<td class="org-left">L</td>
+<td class="org-right">3.9216e-3</td>
+<td class="org-right">0100110</td>
+<td class="org-right">7</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.3333</td>
+<td class="org-right">0</td>
+<td class="org-right">8</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-right">3.9370e-3</td>
+<td class="org-right">0010011</td>
+<td class="org-right">15</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.4000</td>
+<td class="org-right">00</td>
+<td class="org-right">17</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-right">3.9526e-3</td>
+<td class="org-right">001000</td>
+<td class="org-right">23</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.4286</td>
+<td class="org-right">000</td>
+<td class="org-right">26</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">3.9683e-3</td>
+<td class="org-right">001000001</td>
+<td class="org-right">35</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.4444</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">35</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">3.9841e-3</td>
+<td class="org-right">000010011</td>
+<td class="org-right">44</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.4545</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">44</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">4.0000e-3</td>
+<td class="org-right">00011111</td>
+<td class="org-right">52</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.4615</td>
+<td class="org-right">0</td>
+<td class="org-right">53</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">4.0161e-3</td>
+<td class="org-right">00011100</td>
+<td class="org-right">61</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">6.6667e-2</td>
+<td class="org-right">00001</td>
+<td class="org-right">66</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">6.2500e-2</td>
+<td class="org-right">0000</td>
+<td class="org-right">70</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">5.8824e-2</td>
+<td class="org-right">001</td>
+<td class="org-right">73</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">0.1111</td>
+<td class="org-right">000</td>
+<td class="org-right">76</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.3684</td>
+<td class="org-right">001</td>
+<td class="org-right">79</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">4.0323e-3</td>
+<td class="org-right">01001</td>
+<td class="org-right">84</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.3810</td>
+<td class="org-right">000</td>
+<td class="org-right">87</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">4.0486e-3</td>
+<td class="org-right">001000100</td>
+<td class="org-right">96</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">4.3478e-2</td>
+<td class="org-right">010</td>
+<td class="org-right">99</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">8.3333e-2</td>
+<td class="org-right">00000</td>
+<td class="org-right">104</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">8.0000e-2</td>
+<td class="org-right">010</td>
+<td class="org-right">107</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">7.6923e-2</td>
+<td class="org-right">00</td>
+<td class="org-right">109</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">3.7037e-2</td>
+<td class="org-right">0000010</td>
+<td class="org-right">116</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0.1071</td>
+<td class="org-right">010</td>
+<td class="org-right">119</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1034</td>
+<td class="org-right">0000</td>
+<td class="org-right">123</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">0.1000</td>
+<td class="org-right">010</td>
+<td class="org-right">126</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.2903</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">126</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">4.0650e-3</td>
+<td class="org-right">00010101</td>
+<td class="org-right">134</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">3.0303e-2</td>
+<td class="org-right">000110</td>
+<td class="org-right">140</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0.1176</td>
+<td class="org-right">0</td>
+<td class="org-right">141</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.2857</td>
+<td class="org-right">0001</td>
+<td class="org-right">145</td>
+</tr>
+
+<tr>
+<td class="org-left">s</td>
+<td class="org-right">4.0816e-3</td>
+<td class="org-right">001100</td>
+<td class="org-right">151</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1081</td>
+<td class="org-right">000000</td>
+<td class="org-right">157</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.2895</td>
+<td class="org-right">1</td>
+<td class="org-right">158</td>
+</tr>
+
+<tr>
+<td class="org-left">y</td>
+<td class="org-right">4.0984e-3</td>
+<td class="org-right">001101</td>
+<td class="org-right">164</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-right">2.5000e-2</td>
+<td class="org-right">00001</td>
+<td class="org-right">169</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">2.4390e-2</td>
+<td class="org-right">000</td>
+<td class="org-right">172</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.2857</td>
+<td class="org-right">00000</td>
+<td class="org-right">177</td>
+</tr>
+
+<tr>
+<td class="org-left">,</td>
+<td class="org-right">4.1152e-3</td>
+<td class="org-right">0000100011</td>
+<td class="org-right">187</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1136</td>
+<td class="org-right">000</td>
+<td class="org-right">190</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.2889</td>
+<td class="org-right">1</td>
+<td class="org-right">191</td>
+</tr>
+
+<tr>
+<td class="org-left">b</td>
+<td class="org-right">4.1322e-3</td>
+<td class="org-right">001011</td>
+<td class="org-right">197</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">4.2553e-2</td>
+<td class="org-right">00010</td>
+<td class="org-right">202</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0.1042</td>
+<td class="org-right">0001</td>
+<td class="org-right">206</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1224</td>
+<td class="org-right">0000</td>
+<td class="org-right">210</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.2800</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">210</td>
+</tr>
+
+<tr>
+<td class="org-left">n</td>
+<td class="org-right">4.1494e-3</td>
+<td class="org-right">0001000</td>
+<td class="org-right">217</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">5.7692e-2</td>
+<td class="org-right">000001</td>
+<td class="org-right">223</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-right">1.8868e-2</td>
+<td class="org-right">0011100</td>
+<td class="org-right">230</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">7.4074e-2</td>
+<td class="org-right">001</td>
+<td class="org-right">233</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">3.6364e-2</td>
+<td class="org-right">0011</td>
+<td class="org-right">237</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1250</td>
+<td class="org-right">0000</td>
+<td class="org-right">241</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">7.0175e-2</td>
+<td class="org-right">001</td>
+<td class="org-right">244</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">5.1724e-2</td>
+<td class="org-right">00110</td>
+<td class="org-right">249</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">5.0847e-2</td>
+<td class="org-right">01</td>
+<td class="org-right">251</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0.1000</td>
+<td class="org-right">0001</td>
+<td class="org-right">255</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1311</td>
+<td class="org-right">0000</td>
+<td class="org-right">259</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0.1129</td>
+<td class="org-right">010</td>
+<td class="org-right">262</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">7.9365e-2</td>
+<td class="org-right">0010</td>
+<td class="org-right">266</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">7.8125e-2</td>
+<td class="org-right">0010</td>
+<td class="org-right">270</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1385</td>
+<td class="org-right">000</td>
+<td class="org-right">273</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">9.0909e-2</td>
+<td class="org-right">010</td>
+<td class="org-right">276</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">8.9552e-2</td>
+<td class="org-right">001</td>
+<td class="org-right">279</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">2.9412e-2</td>
+<td class="org-right">00010</td>
+<td class="org-right">284</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">5.7971e-2</td>
+<td class="org-right">0011</td>
+<td class="org-right">288</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0.1143</td>
+<td class="org-right">0</td>
+<td class="org-right">289</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1408</td>
+<td class="org-right">000000</td>
+<td class="org-right">295</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0.1250</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">295</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">9.5890e-2</td>
+<td class="org-right">000010</td>
+<td class="org-right">301</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">4.0541e-2</td>
+<td class="org-right">00</td>
+<td class="org-right">303</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0.1333</td>
+<td class="org-right">000</td>
+<td class="org-right">306</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1447</td>
+<td class="org-right">000000</td>
+<td class="org-right">312</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.1948</td>
+<td class="org-right">11</td>
+<td class="org-right">314</td>
+</tr>
+
+<tr>
+<td class="org-left">l</td>
+<td class="org-right">4.1667e-3</td>
+<td class="org-right">0101001</td>
+<td class="org-right">321</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-right">2.5316e-2</td>
+<td class="org-right">001100</td>
+<td class="org-right">327</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-right">2.5000e-2</td>
+<td class="org-right">10000</td>
+<td class="org-right">332</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">8.6420e-2</td>
+<td class="org-right">0010</td>
+<td class="org-right">336</td>
+</tr>
+
+<tr>
+<td class="org-left">s</td>
+<td class="org-right">1.2195e-2</td>
+<td class="org-right">011010</td>
+<td class="org-right">342</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0.1446</td>
+<td class="org-right">000</td>
+<td class="org-right">345</td>
+</tr>
+
+<tr>
+<td class="org-left">y</td>
+<td class="org-right">1.1905e-2</td>
+<td class="org-right">1000</td>
+<td class="org-right">349</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-right">3.5294e-2</td>
+<td class="org-right">0000111</td>
+<td class="org-right">356</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">4.6512e-2</td>
+<td class="org-right">01101</td>
+<td class="org-right">361</td>
+</tr>
+
+<tr>
+<td class="org-left">\</td>
+<td class="org-right">0.1839</td>
+<td class="org-right">1</td>
+<td class="org-right">362</td>
+</tr>
+
+<tr>
+<td class="org-left">.</td>
+<td class="org-right">4.1841e-3</td>
+<td class="org-right">000011110</td>
+<td class="org-right">371</td>
+</tr>
+</tbody>
+<tbody>
+<tr>
+<td class="org-left">final</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">1</td>
+<td class="org-right">372</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+On every step algorithm saves 16-digit high and low variables. If
+the interval we go into is small enough that new bounds share most
+significant bits, we put them on the wire. This algorithm is
+decribed both in textbook and on wikipedia<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup> and also in Amir
+Said's article "Introduction to Arithmetic Coding"<sup><a id="fnr.2" class="footref" href="#fn.2">2</a></sup>. Thus empty
+spaces in third column mean that interval didn't satisfy this
+property. So eventually it took \(372\) bits to encode the proverb,
+better than huffman.
+</p>
 </div>
+</div>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+<a href="https://en.wikipedia.org/wiki/Arithmetic_coding#Precision_and_renormalization">https://en.wikipedia.org/wiki/Arithmetic_coding#Precision_and_renormalization</a>
+</p></div></div>
+
+<div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2">2</a></sup> <div class="footpara"><p class="footpara">
+<a href="http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf">http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf</a>
+</p></div></div>
+
+
+</div>
+</div></div>
 <div id="postamble" class="status">
 <p class="author">Author: Volkhov Mikhail, M3338</p>
-<p class="date">Created: 2016-12-10 Sat 11:18</p>
+<p class="date">Created: 2016-12-14 Wed 14:02</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
