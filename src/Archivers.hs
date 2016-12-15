@@ -12,7 +12,8 @@ module Archivers () where
 
 import qualified Base                  as B (Show (..))
 import           Control.Exception     (assert)
-import           Control.Lens          (makeLenses, use, uses, (%=), (.=), (<>=))
+import           Control.Lens          (makeLenses, to, use, uses, (%=), (.=), (<>=),
+                                        (^.), _1, _2)
 import           Control.Monad.Writer  (MonadWriter, Writer, runWriter, tell)
 import           Data.Bifunctor        (first, second)
 import           Data.Bits             (testBit)
@@ -41,7 +42,7 @@ log2' = log2 . fromIntegral
 proverb :: ByteString
 proverb =
     encodeUtf8
-        ("Love the heart that hurts you, but never hurt the heart that loves you." :: Text)
+        ("Love_the_heart_that_hurts_you,_but_never_hurt_the_heart_that_loves_you." :: Text)
 
 newtype Logger w a = Logger
     { getLogger :: Writer [w] a
@@ -306,15 +307,15 @@ instance Show LZ77Trace where
 
 type LZ77M a = StateT LZ77State (Writer [LZ77Trace]) a
 
-lz77Do :: BS.ByteString -> Int -> Int -> LZ77M ()
-lz77Do input _ i | i >= BS.length input = pure ()
-lz77Do input window i = do
+lz77Do :: (Int -> [Bool]) -> BS.ByteString -> Int -> Int -> LZ77M ()
+lz77Do uni input _ i | i >= BS.length input = pure ()
+lz77Do uni input window i = do
     bestMatch <- uses lzDict workingInputs
 --    traceShowM bestMatch
 --    traceShowM =<< uses lzDict (map (first fromWord8) . subwords)
     maybe onNewWord onMatch bestMatch
     stripDictionary
-    lz77Do input window $ i + maybe 1 (length . fst) bestMatch
+    lz77Do uni input window $ i + maybe 1 (length . fst) bestMatch
   where
     onMatch (match,i) = do
         let lzFlag = True
@@ -328,7 +329,7 @@ lz77Do input window i = do
         let lzCodeWord =
                 lzFlag :
                 convertToBits lzDist dictSizeLog ++
-                mon lzLength
+                uni lzLength
             lzBits = length lzCodeWord
         lzWord <>= (lzCodeWord)
         lzMsgLength <- uses lzWord length
@@ -362,8 +363,19 @@ lz77Do input window i = do
     subwords :: [a] -> [([a],Int)]
     subwords = reverse . inits' . tails'
 
-lz77Encode :: BS.ByteString -> Int -> LZ77M ()
-lz77Encode bs w = lz77Do bs w 0
+lz77Encode :: (Int -> [Bool]) -> BS.ByteString -> Int -> LZ77M ()
+lz77Encode uni bs w = lz77Do uni bs w 0
 
-execLz77 :: ByteString -> Int -> (((), LZ77State), [LZ77Trace])
-execLz77 x w = runWriter $ (runStateT (lz77Encode x w) (LZ77State [] []))
+execLz77 :: (Int -> [Bool]) -> ByteString -> Int -> (((), LZ77State), [LZ77Trace])
+execLz77 u x w = runWriter $ (runStateT (lz77Encode u x w) (LZ77State [] []))
+
+lz77Other = map (\(u,w) -> (toUniS u, w, exec (toUni u) w)) testData
+  where
+    toUni 0 = unar
+    toUni 1 = mon
+    toUni 2 = elias
+    toUniS 0 = "Unary"
+    toUniS 1 = "Levenshtein"
+    toUniS 2 = "Elias"
+    testData = [(uni, w) | uni <- [0..2], w <- [45,50..75]]
+    exec uni w = (execLz77 uni proverb w) ^. _1 . _2 . lzWord . to length

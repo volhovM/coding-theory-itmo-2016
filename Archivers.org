@@ -19,34 +19,42 @@
   It's in english that's why i'll stick to utf-8/ascii encoding as
   byte representation. It contains $71$ letters, so in general it's
   $568$ bytes if used without any coding.
+
+  Remark: sorry, but my rendering format doesn't support proper
+  underscore marks (_) -- they turn into underlines and i see no way
+  to escape them. "␣" can be used instead, but it's too ugly. I'll use
+  it when ambiguous, and just leave empty place in other places. Yes,
+  and sorry for the tables. Both when they're are and are not
+  full-width, they are ugly. Rule of thumb: use the same table
+  formatting as in the textbook. So i choose to use full width.
 * Two-pass huffman coding
   I've implemented regural huffman coding, as it can be seen from the
   first table: code words of the same length are sorted
   lexicographically:
-  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; margin-left: 15px;
-  | Char | Code Word | Freq |
-  |------+-----------+------|
-  |      |        00 |   13 |
-  | e    |       010 |    8 |
-  | h    |       011 |    8 |
-  | t    |       100 |   11 |
-  | r    |      1010 |    5 |
-  | u    |      1011 |    5 |
-  | s    |     11000 |    2 |
-  | y    |     11001 |    2 |
-  | v    |     11010 |    3 |
-  | a    |     11011 |    4 |
-  | o    |     11100 |    4 |
-  | ,    |    111010 |    1 |
-  | .    |    111011 |    1 |
-  | l    |    111100 |    1 |
-  | n    |    111101 |    1 |
-  | L    |    111110 |    1 |
-  | b    |    111111 |    1 |
-  |------+-----------+------|
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
+  | $Char$ | $Codeword$ | $Frequency$ |
+  |--------+------------+-------------|
+  |        |         00 |          13 |
+  | e      |        010 |           8 |
+  | h      |        011 |           8 |
+  | t      |        100 |          11 |
+  | r      |       1010 |           5 |
+  | u      |       1011 |           5 |
+  | s      |      11000 |           2 |
+  | y      |      11001 |           2 |
+  | v      |      11010 |           3 |
+  | a      |      11011 |           4 |
+  | o      |      11100 |           4 |
+  | ,      |     111010 |           1 |
+  | .      |     111011 |           1 |
+  | l      |     111100 |           1 |
+  | n      |     111101 |           1 |
+  | L      |     111110 |           1 |
+  | b      |     111111 |           1 |
+  |--------+------------+-------------|
 
   And the second pass completes encoding:
-  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; margin-left: 15px;
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
   | $C$ | $P(C)$  | $Codeword$ | $L(S)$ |
   |-----+---------+------------+--------|
   | L   | 1 / 71  |     111110 |      6 |
@@ -128,11 +136,11 @@
   (calculated manually using table 3.3 from the study book).
 
   \begin{align*}
-  \lceil\log{\dbinom{256}{1}}\rceil +
-  \lceil\log{\dbinom{255}{3}}\rceil +
-  \lceil\log{\dbinom{254}{2}}\rceil +
-  \lceil\log{\dbinom{253}{5}}\rceil +
-  \lceil\log{\dbinom{252}{6}}\rceil = 117
+  \left\lceil\log{\dbinom{256}{1}}\right\rceil +
+  \left\lceil\log{\dbinom{255}{3}}\right\rceil +
+  \left\lceil\log{\dbinom{254}{2}}\right\rceil +
+  \left\lceil\log{\dbinom{253}{5}}\right\rceil +
+  \left\lceil\log{\dbinom{252}{6}}\right\rceil = 117
   \end{align*}
 
   So totally $l_1 = 19 + 117 = 136$, and total length is $l = l_1+l_2 =
@@ -146,7 +154,7 @@
   Here is the table algorithm outputs (backslash stands for escape
   symbol):
 
-  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; margin-left: 15px;
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
   | $C$   |    $P(C)$ | $Codeword$ | $L(S)$ |
   |-------+-----------+------------+--------|
   | \     |    1.0000 |            |      0 |
@@ -288,6 +296,90 @@
   composition $l_1 = 154$, number of the proverb in list of strings
   with this composition $l_2 = 223$. Total information needed to
   transmit the string: $l = l_1+l_2 = 377$ bits.
+* LZ77
+  Implemented version of LZ77 uses levenshtein's code described in
+  textbook (because elias and unary universal codes are less efficient
+  for current dataset). It uses window of size 100, more than
+  proverb's length.
+
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
+  | $Flag$ | $Substring$      | $l$ | $l$ |       $Codeword$ | $Bits$ | $Total$ |
+  |--------+------------------+-----+-----+------------------+--------+---------|
+  |      0 | L                |     |   0 |        001001100 |      9 |       9 |
+  |      0 | o                |     |   0 |        001101111 |      9 |      18 |
+  |      0 | v                |     |   0 |        001110110 |      9 |      27 |
+  |      0 | e                |     |   0 |        001100101 |      9 |      36 |
+  |      0 | ␣                |     |   0 |        001011111 |      9 |      45 |
+  |      0 | t                |     |   0 |        001110100 |      9 |      54 |
+  |      0 | h                |     |   0 |        001101000 |      9 |      63 |
+  |      1 | e␣               |   4 |   2 |          1100100 |      7 |      70 |
+  |      1 | he               |   3 |   2 |         10011100 |      8 |      78 |
+  |      0 | a                |     |   0 |        001100001 |      9 |      87 |
+  |      0 | r                |     |   0 |        001110010 |      9 |      96 |
+  |      1 | t                |   8 |   1 |           110000 |      6 |     102 |
+  |      1 | ␣th              |  10 |   3 |         11010101 |      8 |     110 |
+  |      1 | a                |   6 |   1 |          1001100 |      7 |     117 |
+  |      1 | t␣               |   5 |   2 |        100101100 |      9 |     126 |
+  |      1 | h                |  14 |   1 |          1011100 |      7 |     133 |
+  |      0 | u                |     |   0 |        001110101 |      9 |     142 |
+  |      1 | rt               |  10 |   2 |        101010100 |      9 |     151 |
+  |      0 | s                |     |   0 |        001110011 |      9 |     160 |
+  |      1 | ␣                |  21 |   1 |          1101010 |      7 |     167 |
+  |      0 | y                |     |   0 |        001111001 |      9 |     176 |
+  |      1 | o                |  26 |   1 |          1110100 |      7 |     183 |
+  |      1 | u                |   7 |   1 |          1001110 |      7 |     190 |
+  |      0 | ,                |     |   0 |        000101100 |      9 |     199 |
+  |      1 | ␣                |  26 |   1 |          1110100 |      7 |     206 |
+  |      0 | b                |     |   0 |        001100010 |      9 |     215 |
+  |      1 | u                |  11 |   1 |         10010110 |      8 |     223 |
+  |      1 | t␣               |  20 |   2 |       1010100100 |     10 |     233 |
+  |      0 | n                |     |   0 |        001101110 |      9 |     242 |
+  |      1 | e                |  33 |   1 |         11000010 |      8 |     250 |
+  |      1 | ve               |  35 |   2 |       1100011100 |     10 |     260 |
+  |      1 | r                |  27 |   1 |         10110110 |      8 |     268 |
+  |      1 | ␣hurt            |  21 |   5 |     101010111001 |     12 |     280 |
+  |      1 | ␣the␣heart␣that␣ |  41 |  16 | 1101001111100000 |     16 |     296 |
+  |      0 | l                |     |   0 |        001101100 |      9 |     305 |
+  |      1 | ove              |  61 |   3 |       1111101101 |     10 |     315 |
+  |      1 | s␣you            |  41 |   5 |    1010100111001 |     13 |     328 |
+  |      0 | .                |     |   0 |        000101110 |      9 |     337 |
+  |--------+------------------+-----+-----+------------------+--------+---------|
+
+  Here's also results for other universal codes (smaller windows
+  affect length dramatically because of that "the heart that" chunk in
+  the end. Best performance of levenshtain is achieved because its
+  encoding of "1" takes only 1 bit (compared to 2 bits of elias) and
+  it's more effective then unary on bigger numbers. In general i
+  expect elias to perform better.
+
+  #+ATTR_HTML: :align center :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
+  | $Code$      | $W$ | $L$ |
+  |-------------+-----+-----|
+  | Unary       |  45 | 344 |
+  | Unary       |  50 | 344 |
+  | Unary       |  55 | 344 |
+  | Unary       |  60 | 344 |
+  | Unary       |  65 | 338 |
+  | Unary       |  70 | 338 |
+  | Unary       |  75 | 338 |
+  | Levenshtein |  45 | 344 |
+  | Levenshtein |  50 | 344 |
+  | Levenshtein |  55 | 344 |
+  | Levenshtein |  60 | 344 |
+  | Levenshtein |  65 | 337 |
+  | Levenshtein |  70 | 337 |
+  | Levenshtein |  75 | 337 |
+  | Elias       |  45 | 358 |
+  | Elias       |  50 | 358 |
+  | Elias       |  55 | 358 |
+  | Elias       |  60 | 358 |
+  | Elias       |  65 | 350 |
+  | Elias       |  70 | 350 |
+  | Elias       |  75 | 350 |
+  |-------------+-----+-----|
+
+  So in conclusion we've achieved $l = 337$ bits, which is the best
+  result among experiments for now.
 * Footnotes
 [fn:1] https://en.wikipedia.org/wiki/Arithmetic_coding#Precision_and_renormalization
 [fn:2] http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf

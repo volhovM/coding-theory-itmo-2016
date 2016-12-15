@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2016-12-14 Wed 15:30 -->
+<!-- 2016-12-15 Thu 17:10 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="viewport" content="width=device-width, initial-scale=1" />
 <title>Information theory: HW #3 solution</title>
@@ -174,6 +174,7 @@ for the JavaScript code in this tag.
 <li><a href="#orgheadline2">2. Two-pass huffman coding</a></li>
 <li><a href="#orgheadline3">3. Adaptive arithmetic coding</a></li>
 <li><a href="#orgheadline4">4. Enumerative</a></li>
+<li><a href="#orgheadline5">5. LZ77</a></li>
 </ul>
 </div>
 </div>
@@ -205,6 +206,16 @@ It's in english that's why i'll stick to utf-8/ascii encoding as
 byte representation. It contains \(71\) letters, so in general it's
 \(568\) bytes if used without any coding.
 </p>
+
+<p>
+Remark: sorry, but my rendering format doesn't support proper
+underscore marks (_) &#x2013; they turn into underlines and i see no way
+to escape them. "␣" can be used instead, but it's too ugly. I'll use
+it when ambiguous, and just leave empty place in other places. Yes,
+and sorry for the tables. Both when they're are and are not
+full-width, they are ugly. Rule of thumb: use the same table
+formatting as in the textbook. So i choose to use full width.
+</p>
 </div>
 </div>
 <div id="outline-container-orgheadline2" class="outline-2">
@@ -215,7 +226,7 @@ I've implemented regural huffman coding, as it can be seen from the
 first table: code words of the same length are sorted
 lexicographically:
 </p>
-<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; margin-left: 15px;">
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
 
 
 <colgroup>
@@ -227,9 +238,9 @@ lexicographically:
 </colgroup>
 <thead>
 <tr>
-<th scope="col" class="org-left">Char</th>
-<th scope="col" class="org-right">Code Word</th>
-<th scope="col" class="org-right">Freq</th>
+<th scope="col" class="org-left">\(Char\)</th>
+<th scope="col" class="org-right">\(Codeword\)</th>
+<th scope="col" class="org-right">\(Frequency\)</th>
 </tr>
 </thead>
 <tbody>
@@ -340,7 +351,7 @@ lexicographically:
 <p>
 And the second pass completes encoding:
 </p>
-<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; margin-left: 15px;">
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
 
 
 <colgroup>
@@ -868,11 +879,11 @@ transfer the tree itself, it's sufficient to pass only \(19\) bits
 </p>
 
 \begin{align*}
-\lceil\log{\dbinom{256}{1}}\rceil +
-\lceil\log{\dbinom{255}{3}}\rceil +
-\lceil\log{\dbinom{254}{2}}\rceil +
-\lceil\log{\dbinom{253}{5}}\rceil +
-\lceil\log{\dbinom{252}{6}}\rceil = 117
+\left\lceil\log{\dbinom{256}{1}}\right\rceil +
+\left\lceil\log{\dbinom{255}{3}}\right\rceil +
+\left\lceil\log{\dbinom{254}{2}}\right\rceil +
+\left\lceil\log{\dbinom{253}{5}}\right\rceil +
+\left\lceil\log{\dbinom{252}{6}}\right\rceil = 117
 \end{align*}
 
 <p>
@@ -896,7 +907,7 @@ Here is the table algorithm outputs (backslash stands for escape
 symbol):
 </p>
 
-<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; margin-left: 15px;">
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
 
 
 <colgroup>
@@ -1607,6 +1618,589 @@ transmit the string: \(l = l_1+l_2 = 377\) bits.
 </p>
 </div>
 </div>
+<div id="outline-container-orgheadline5" class="outline-2">
+<h2 id="orgheadline5"><span class="section-number-2">5</span> LZ77</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+Implemented version of LZ77 uses levenshtein's code described in
+textbook (because elias and unary universal codes are less efficient
+for current dataset). It uses window of size 100, more than
+proverb's length.
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
+
+
+<colgroup>
+<col  class="org-right" />
+
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">\(Flag\)</th>
+<th scope="col" class="org-left">\(Substring\)</th>
+<th scope="col" class="org-right">\(l\)</th>
+<th scope="col" class="org-right">\(l\)</th>
+<th scope="col" class="org-right">\(Codeword\)</th>
+<th scope="col" class="org-right">\(Bits\)</th>
+<th scope="col" class="org-right">\(Total\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">L</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001001100</td>
+<td class="org-right">9</td>
+<td class="org-right">9</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">o</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001101111</td>
+<td class="org-right">9</td>
+<td class="org-right">18</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">v</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001110110</td>
+<td class="org-right">9</td>
+<td class="org-right">27</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">e</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001100101</td>
+<td class="org-right">9</td>
+<td class="org-right">36</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">␣</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001011111</td>
+<td class="org-right">9</td>
+<td class="org-right">45</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">t</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001110100</td>
+<td class="org-right">9</td>
+<td class="org-right">54</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">h</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001101000</td>
+<td class="org-right">9</td>
+<td class="org-right">63</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">e␣</td>
+<td class="org-right">4</td>
+<td class="org-right">2</td>
+<td class="org-right">1100100</td>
+<td class="org-right">7</td>
+<td class="org-right">70</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">he</td>
+<td class="org-right">3</td>
+<td class="org-right">2</td>
+<td class="org-right">10011100</td>
+<td class="org-right">8</td>
+<td class="org-right">78</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">a</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001100001</td>
+<td class="org-right">9</td>
+<td class="org-right">87</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">r</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001110010</td>
+<td class="org-right">9</td>
+<td class="org-right">96</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">t</td>
+<td class="org-right">8</td>
+<td class="org-right">1</td>
+<td class="org-right">110000</td>
+<td class="org-right">6</td>
+<td class="org-right">102</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">␣th</td>
+<td class="org-right">10</td>
+<td class="org-right">3</td>
+<td class="org-right">11010101</td>
+<td class="org-right">8</td>
+<td class="org-right">110</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">a</td>
+<td class="org-right">6</td>
+<td class="org-right">1</td>
+<td class="org-right">1001100</td>
+<td class="org-right">7</td>
+<td class="org-right">117</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">t␣</td>
+<td class="org-right">5</td>
+<td class="org-right">2</td>
+<td class="org-right">100101100</td>
+<td class="org-right">9</td>
+<td class="org-right">126</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">h</td>
+<td class="org-right">14</td>
+<td class="org-right">1</td>
+<td class="org-right">1011100</td>
+<td class="org-right">7</td>
+<td class="org-right">133</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">u</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001110101</td>
+<td class="org-right">9</td>
+<td class="org-right">142</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">rt</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">101010100</td>
+<td class="org-right">9</td>
+<td class="org-right">151</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">s</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001110011</td>
+<td class="org-right">9</td>
+<td class="org-right">160</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">␣</td>
+<td class="org-right">21</td>
+<td class="org-right">1</td>
+<td class="org-right">1101010</td>
+<td class="org-right">7</td>
+<td class="org-right">167</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">y</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001111001</td>
+<td class="org-right">9</td>
+<td class="org-right">176</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">o</td>
+<td class="org-right">26</td>
+<td class="org-right">1</td>
+<td class="org-right">1110100</td>
+<td class="org-right">7</td>
+<td class="org-right">183</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">u</td>
+<td class="org-right">7</td>
+<td class="org-right">1</td>
+<td class="org-right">1001110</td>
+<td class="org-right">7</td>
+<td class="org-right">190</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">,</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">000101100</td>
+<td class="org-right">9</td>
+<td class="org-right">199</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">␣</td>
+<td class="org-right">26</td>
+<td class="org-right">1</td>
+<td class="org-right">1110100</td>
+<td class="org-right">7</td>
+<td class="org-right">206</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">b</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001100010</td>
+<td class="org-right">9</td>
+<td class="org-right">215</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">u</td>
+<td class="org-right">11</td>
+<td class="org-right">1</td>
+<td class="org-right">10010110</td>
+<td class="org-right">8</td>
+<td class="org-right">223</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">t␣</td>
+<td class="org-right">20</td>
+<td class="org-right">2</td>
+<td class="org-right">1010100100</td>
+<td class="org-right">10</td>
+<td class="org-right">233</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">n</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001101110</td>
+<td class="org-right">9</td>
+<td class="org-right">242</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">e</td>
+<td class="org-right">33</td>
+<td class="org-right">1</td>
+<td class="org-right">11000010</td>
+<td class="org-right">8</td>
+<td class="org-right">250</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">ve</td>
+<td class="org-right">35</td>
+<td class="org-right">2</td>
+<td class="org-right">1100011100</td>
+<td class="org-right">10</td>
+<td class="org-right">260</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">r</td>
+<td class="org-right">27</td>
+<td class="org-right">1</td>
+<td class="org-right">10110110</td>
+<td class="org-right">8</td>
+<td class="org-right">268</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">␣hurt</td>
+<td class="org-right">21</td>
+<td class="org-right">5</td>
+<td class="org-right">101010111001</td>
+<td class="org-right">12</td>
+<td class="org-right">280</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">␣the␣heart␣that␣</td>
+<td class="org-right">41</td>
+<td class="org-right">16</td>
+<td class="org-right">1101001111100000</td>
+<td class="org-right">16</td>
+<td class="org-right">296</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">l</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001101100</td>
+<td class="org-right">9</td>
+<td class="org-right">305</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">ove</td>
+<td class="org-right">61</td>
+<td class="org-right">3</td>
+<td class="org-right">1111101101</td>
+<td class="org-right">10</td>
+<td class="org-right">315</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">s␣you</td>
+<td class="org-right">41</td>
+<td class="org-right">5</td>
+<td class="org-right">1010100111001</td>
+<td class="org-right">13</td>
+<td class="org-right">328</td>
+</tr>
+
+<tr>
+<td class="org-right">0</td>
+<td class="org-left">.</td>
+<td class="org-right">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">000101110</td>
+<td class="org-right">9</td>
+<td class="org-right">337</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Here's also results for other universal codes (smaller windows
+affect length dramatically because of that "the heart that" chunk in
+the end. Best performance of levenshtain is achieved because its
+encoding of "1" takes only 1 bit (compared to 2 bits of elias) and
+it's more effective then unary on bigger numbers. In general i
+expect elias to perform better.
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" align="center" style="line-height: 7px; width: 100%;">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">\(Code\)</th>
+<th scope="col" class="org-right">\(W\)</th>
+<th scope="col" class="org-right">\(L\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Unary</td>
+<td class="org-right">45</td>
+<td class="org-right">344</td>
+</tr>
+
+<tr>
+<td class="org-left">Unary</td>
+<td class="org-right">50</td>
+<td class="org-right">344</td>
+</tr>
+
+<tr>
+<td class="org-left">Unary</td>
+<td class="org-right">55</td>
+<td class="org-right">344</td>
+</tr>
+
+<tr>
+<td class="org-left">Unary</td>
+<td class="org-right">60</td>
+<td class="org-right">344</td>
+</tr>
+
+<tr>
+<td class="org-left">Unary</td>
+<td class="org-right">65</td>
+<td class="org-right">338</td>
+</tr>
+
+<tr>
+<td class="org-left">Unary</td>
+<td class="org-right">70</td>
+<td class="org-right">338</td>
+</tr>
+
+<tr>
+<td class="org-left">Unary</td>
+<td class="org-right">75</td>
+<td class="org-right">338</td>
+</tr>
+
+<tr>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">45</td>
+<td class="org-right">344</td>
+</tr>
+
+<tr>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">50</td>
+<td class="org-right">344</td>
+</tr>
+
+<tr>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">55</td>
+<td class="org-right">344</td>
+</tr>
+
+<tr>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">60</td>
+<td class="org-right">344</td>
+</tr>
+
+<tr>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">65</td>
+<td class="org-right">337</td>
+</tr>
+
+<tr>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">70</td>
+<td class="org-right">337</td>
+</tr>
+
+<tr>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">75</td>
+<td class="org-right">337</td>
+</tr>
+
+<tr>
+<td class="org-left">Elias</td>
+<td class="org-right">45</td>
+<td class="org-right">358</td>
+</tr>
+
+<tr>
+<td class="org-left">Elias</td>
+<td class="org-right">50</td>
+<td class="org-right">358</td>
+</tr>
+
+<tr>
+<td class="org-left">Elias</td>
+<td class="org-right">55</td>
+<td class="org-right">358</td>
+</tr>
+
+<tr>
+<td class="org-left">Elias</td>
+<td class="org-right">60</td>
+<td class="org-right">358</td>
+</tr>
+
+<tr>
+<td class="org-left">Elias</td>
+<td class="org-right">65</td>
+<td class="org-right">350</td>
+</tr>
+
+<tr>
+<td class="org-left">Elias</td>
+<td class="org-right">70</td>
+<td class="org-right">350</td>
+</tr>
+
+<tr>
+<td class="org-left">Elias</td>
+<td class="org-right">75</td>
+<td class="org-right">350</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+So in conclusion we've achieved \(l = 337\) bits, which is the best
+result among experiments for now.
+</p>
+</div>
+</div>
 <div id="footnotes">
 <h2 class="footnotes">Footnotes: </h2>
 <div id="text-footnotes">
@@ -1624,7 +2218,7 @@ transmit the string: \(l = l_1+l_2 = 377\) bits.
 </div></div>
 <div id="postamble" class="status">
 <p class="author">Author: Volkhov Mikhail, M3338</p>
-<p class="date">Created: 2016-12-14 Wed 15:30</p>
+<p class="date">Created: 2016-12-15 Thu 17:10</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
