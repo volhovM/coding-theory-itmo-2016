@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ViewPatterns        #-}
 
@@ -13,12 +14,13 @@ import qualified Base                  as B (Show (..))
 import           Control.Exception     (assert)
 import           Control.Lens          (makeLenses, use, uses, (%=), (.=), (<>=))
 import           Control.Monad.Writer  (MonadWriter, Writer, runWriter, tell)
-import           Data.Bifunctor        (second)
+import           Data.Bifunctor        (first, second)
 import           Data.Bits             (testBit)
 import qualified Data.ByteString       as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.List             (dropWhileEnd, nub)
 import qualified Data.Map.Strict       as M
+import           Data.Maybe            (fromJust)
 import           Data.Number.BigFloat  (BigFloat (..), Prec50, PrecPlus20)
 import           Data.Ord              (comparing)
 import           Data.Ratio            ((%))
@@ -44,6 +46,9 @@ proverb =
 newtype Logger w a = Logger
     { getLogger :: Writer [w] a
     } deriving (Functor, Applicative, Monad, MonadWriter [w])
+
+fromWord8 :: [Word8] -> [Char]
+fromWord8 = map (chr . fromIntegral)
 
 ----------------------------------------------------------------------------
 -- Huffman
@@ -232,3 +237,133 @@ enumerative input = l1+l2
                 (factorial $ fromIntegral $ length comp)
                 compcomp
     l1 = l11 + l12
+
+
+----------------------------------------------------------------------------
+-- Universal coding
+----------------------------------------------------------------------------
+
+bin' :: Int -> [Bool]
+bin' x = drop 1 $ dropWhile not $ convertToBits x 32
+
+unar :: Int -> [Bool]
+unar n = replicate (n-1) True ++ [False]
+
+elias :: Int -> [Bool]
+elias n = p1 ++ p2 ++ p3
+  where
+    p1 = unar $ 2 + length p2
+    p2 = bin' $ length p3
+    p3 = bin' n
+
+mon :: Int -> [Bool]
+mon n = p1 ++ p2
+  where
+    p1 = unar $ length p2 + 1
+    p2 = bin' n
+
+----------------------------------------------------------------------------
+-- LZ-77
+----------------------------------------------------------------------------
+
+
+data LZ77State = LZ77State
+    { _lzDict :: [Word8]
+    , _lzWord :: [Bool]
+    } deriving Show
+
+makeLenses ''LZ77State
+
+data LZ77Trace = LZ77Trace
+    { lzFlag      :: Bool
+    , lzCurString :: String
+    , lzDist      :: Maybe Int
+    , lzLength    :: Int
+    , lzCodeWord  :: [Bool]
+    , lzBits      :: Int
+    , lzMsgLength :: Int
+    }
+
+instance Show LZ77Trace where
+    show LZ77Trace {..} =
+        intercalate
+            "|"
+            [ ""
+            , showBool lzFlag
+            , lzCurString
+            , showMaybe lzDist
+            , show lzLength
+            , concatMap showBool lzCodeWord
+            , show lzBits
+            , show lzMsgLength
+            , ""
+            ]
+      where
+        showBool False = "0"
+        showBool True  = "1"
+        showMaybe Nothing  = ""
+        showMaybe (Just a) = show a
+
+type LZ77M a = StateT LZ77State (Writer [LZ77Trace]) a
+
+lz77Do :: BS.ByteString -> Int -> Int -> LZ77M ()
+lz77Do input _ i | i >= BS.length input = pure ()
+lz77Do input window i = do
+    bestMatch <- uses lzDict workingInputs
+--    traceShowM bestMatch
+--    traceShowM =<< uses lzDict (map (first fromWord8) . subwords)
+    maybe onNewWord onMatch bestMatch
+    stripDictionary
+    lz77Do input window $ i + maybe 1 (length . fst) bestMatch
+  where
+    onMatch (match,i) = do
+        let lzFlag = True
+            lzCurString = fromWord8 match
+            lzLength = length match
+        lzDist <- uses lzDict $ \d -> length d - i
+        dictSizeLog <-
+            uses lzDict $ ceiling . log2' . (+1) . fromIntegral . length
+--        traceShowM lzCurString
+--        traceShowM =<< uses lzDict length
+        let lzCodeWord =
+                lzFlag :
+                convertToBits lzDist dictSizeLog ++
+                mon lzLength
+            lzBits = length lzCodeWord
+        lzWord <>= (lzCodeWord)
+        lzMsgLength <- uses lzWord length
+        tell $ [LZ77Trace {lzDist = Just lzDist,..}]
+        lzDict <>= match
+    onNewWord = do
+        let lzCodeWord = lzFlag : convertToBits (fromJust $ head input') 8
+            lzFlag = False
+            lzCurString :: String
+            lzCurString = fromWord8 $ take 1 input'
+            lzDist = Nothing
+            lzLength = 0
+            lzBits = length lzCodeWord
+        lzWord <>= lzCodeWord
+        lzMsgLength <- uses lzWord length
+        tell $ [LZ77Trace {..}]
+        lzDict <>= [fromJust $ head input']
+    workingInputs :: [Word8] -> Maybe ([Word8], Int)
+    workingInputs dict =
+        let filtered = filter (\(pr, _) -> pr `isPrefixOf` input') $
+                subwords dict
+        in bool (Just $ maximumBy (comparing (length . fst)) filtered)
+                Nothing
+                (null filtered)
+    stripDictionary = do
+        l <- uses lzDict length
+        when (l > window) $ lzDict %= drop (l - window)
+    input' = BS.unpack $ BS.drop i input
+    tails' xs = dropEnd 1 (tails xs) `zip` [0 ..]
+    inits' xs = concatMap (\(str, i) -> drop 1 $ (,i) <$> inits str) xs
+    subwords :: [a] -> [([a],Int)]
+    subwords = reverse . inits' . tails'
+
+lz77Encode :: BS.ByteString -> Int -> LZ77M ()
+lz77Encode bs w = lz77Do bs w 0
+
+execLz77 :: ByteString -> Int -> (((), LZ77State), [LZ77Trace])
+execLz77 x w = runWriter $ (runStateT (lz77Encode x w) (LZ77State [] []))
