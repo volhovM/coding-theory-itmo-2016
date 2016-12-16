@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2016-12-15 Thu 17:10 -->
+<!-- 2016-12-16 Fri 16:11 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="viewport" content="width=device-width, initial-scale=1" />
 <title>Information theory: HW #3 solution</title>
@@ -175,6 +175,7 @@ for the JavaScript code in this tag.
 <li><a href="#orgheadline3">3. Adaptive arithmetic coding</a></li>
 <li><a href="#orgheadline4">4. Enumerative</a></li>
 <li><a href="#orgheadline5">5. LZ77</a></li>
+<li><a href="#orgheadline6">6. LZW</a></li>
 </ul>
 </div>
 </div>
@@ -2201,6 +2202,765 @@ result among experiments for now.
 </p>
 </div>
 </div>
+<div id="outline-container-orgheadline6" class="outline-2">
+<h2 id="orgheadline6"><span class="section-number-2">6</span> LZW</h2>
+<div class="outline-text-2" id="text-6">
+<p>
+I've implemented LZW algorithm with escape symbol and matched it
+with the test proverb (if we cannot&#x2026;), got 291 bit as in the
+textbook. Here are the result on the real proverb:
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">\(Dictionary\)</th>
+<th scope="col" class="org-left">\(Match\)</th>
+<th scope="col" class="org-right">\(Dict index\)</th>
+<th scope="col" class="org-right">\(CodeWord\)</th>
+<th scope="col" class="org-right">\(Bits\)</th>
+<th scope="col" class="org-right">\(Total\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">L</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">01001100</td>
+<td class="org-right">8</td>
+<td class="org-right">8</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">01101111</td>
+<td class="org-right">8</td>
+<td class="org-right">16</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">001110110</td>
+<td class="org-right">9</td>
+<td class="org-right">25</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">0001100101</td>
+<td class="org-right">10</td>
+<td class="org-right">35</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">0001011111</td>
+<td class="org-right">10</td>
+<td class="org-right">45</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">00001110100</td>
+<td class="org-right">11</td>
+<td class="org-right">56</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">00001101000</td>
+<td class="org-right">11</td>
+<td class="org-right">67</td>
+</tr>
+
+<tr>
+<td class="org-left">e␣</td>
+<td class="org-left">e</td>
+<td class="org-right">4</td>
+<td class="org-right">100</td>
+<td class="org-right">3</td>
+<td class="org-right">70</td>
+</tr>
+
+<tr>
+<td class="org-left">␣h</td>
+<td class="org-left">␣</td>
+<td class="org-right">5</td>
+<td class="org-right">101</td>
+<td class="org-right">3</td>
+<td class="org-right">73</td>
+</tr>
+
+<tr>
+<td class="org-left">he</td>
+<td class="org-left">h</td>
+<td class="org-right">7</td>
+<td class="org-right">0111</td>
+<td class="org-right">4</td>
+<td class="org-right">77</td>
+</tr>
+
+<tr>
+<td class="org-left">ea</td>
+<td class="org-left">e</td>
+<td class="org-right">4</td>
+<td class="org-right">0100</td>
+<td class="org-right">4</td>
+<td class="org-right">81</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">000001100001</td>
+<td class="org-right">12</td>
+<td class="org-right">93</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">000001110010</td>
+<td class="org-right">12</td>
+<td class="org-right">105</td>
+</tr>
+
+<tr>
+<td class="org-left">t␣</td>
+<td class="org-left">t</td>
+<td class="org-right">6</td>
+<td class="org-right">0110</td>
+<td class="org-right">4</td>
+<td class="org-right">109</td>
+</tr>
+
+<tr>
+<td class="org-left">␣t</td>
+<td class="org-left">␣</td>
+<td class="org-right">5</td>
+<td class="org-right">0101</td>
+<td class="org-right">4</td>
+<td class="org-right">113</td>
+</tr>
+
+<tr>
+<td class="org-left">th</td>
+<td class="org-left">t</td>
+<td class="org-right">6</td>
+<td class="org-right">0110</td>
+<td class="org-right">4</td>
+<td class="org-right">117</td>
+</tr>
+
+<tr>
+<td class="org-left">ha</td>
+<td class="org-left">h</td>
+<td class="org-right">7</td>
+<td class="org-right">0111</td>
+<td class="org-right">4</td>
+<td class="org-right">121</td>
+</tr>
+
+<tr>
+<td class="org-left">at</td>
+<td class="org-left">a</td>
+<td class="org-right">12</td>
+<td class="org-right">01100</td>
+<td class="org-right">5</td>
+<td class="org-right">126</td>
+</tr>
+
+<tr>
+<td class="org-left">t␣h</td>
+<td class="org-left">t␣</td>
+<td class="org-right">14</td>
+<td class="org-right">01110</td>
+<td class="org-right">5</td>
+<td class="org-right">131</td>
+</tr>
+
+<tr>
+<td class="org-left">hu</td>
+<td class="org-left">h</td>
+<td class="org-right">7</td>
+<td class="org-right">00111</td>
+<td class="org-right">5</td>
+<td class="org-right">136</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">0000001110101</td>
+<td class="org-right">13</td>
+<td class="org-right">149</td>
+</tr>
+
+<tr>
+<td class="org-left">rt</td>
+<td class="org-left">r</td>
+<td class="org-right">13</td>
+<td class="org-right">01101</td>
+<td class="org-right">5</td>
+<td class="org-right">154</td>
+</tr>
+
+<tr>
+<td class="org-left">ts</td>
+<td class="org-left">t</td>
+<td class="org-right">6</td>
+<td class="org-right">00110</td>
+<td class="org-right">5</td>
+<td class="org-right">159</td>
+</tr>
+
+<tr>
+<td class="org-left">s</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">0000001110011</td>
+<td class="org-right">13</td>
+<td class="org-right">172</td>
+</tr>
+
+<tr>
+<td class="org-left">␣y</td>
+<td class="org-left">␣</td>
+<td class="org-right">5</td>
+<td class="org-right">00101</td>
+<td class="org-right">5</td>
+<td class="org-right">177</td>
+</tr>
+
+<tr>
+<td class="org-left">y</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">0000001111001</td>
+<td class="org-right">13</td>
+<td class="org-right">190</td>
+</tr>
+
+<tr>
+<td class="org-left">ou</td>
+<td class="org-left">o</td>
+<td class="org-right">2</td>
+<td class="org-right">00010</td>
+<td class="org-right">5</td>
+<td class="org-right">195</td>
+</tr>
+
+<tr>
+<td class="org-left">u,</td>
+<td class="org-left">u</td>
+<td class="org-right">21</td>
+<td class="org-right">10101</td>
+<td class="org-right">5</td>
+<td class="org-right">200</td>
+</tr>
+
+<tr>
+<td class="org-left">,</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">0000000101100</td>
+<td class="org-right">13</td>
+<td class="org-right">213</td>
+</tr>
+
+<tr>
+<td class="org-left">␣b</td>
+<td class="org-left">␣</td>
+<td class="org-right">5</td>
+<td class="org-right">00101</td>
+<td class="org-right">5</td>
+<td class="org-right">218</td>
+</tr>
+
+<tr>
+<td class="org-left">b</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">0000001100010</td>
+<td class="org-right">13</td>
+<td class="org-right">231</td>
+</tr>
+
+<tr>
+<td class="org-left">ut</td>
+<td class="org-left">u</td>
+<td class="org-right">21</td>
+<td class="org-right">10101</td>
+<td class="org-right">5</td>
+<td class="org-right">236</td>
+</tr>
+
+<tr>
+<td class="org-left">t␣n</td>
+<td class="org-left">t␣</td>
+<td class="org-right">14</td>
+<td class="org-right">01110</td>
+<td class="org-right">5</td>
+<td class="org-right">241</td>
+</tr>
+
+<tr>
+<td class="org-left">n</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">00000001101110</td>
+<td class="org-right">14</td>
+<td class="org-right">255</td>
+</tr>
+
+<tr>
+<td class="org-left">ev</td>
+<td class="org-left">e</td>
+<td class="org-right">4</td>
+<td class="org-right">000100</td>
+<td class="org-right">6</td>
+<td class="org-right">261</td>
+</tr>
+
+<tr>
+<td class="org-left">ve</td>
+<td class="org-left">v</td>
+<td class="org-right">3</td>
+<td class="org-right">000011</td>
+<td class="org-right">6</td>
+<td class="org-right">267</td>
+</tr>
+
+<tr>
+<td class="org-left">er</td>
+<td class="org-left">e</td>
+<td class="org-right">4</td>
+<td class="org-right">000100</td>
+<td class="org-right">6</td>
+<td class="org-right">273</td>
+</tr>
+
+<tr>
+<td class="org-left">r␣</td>
+<td class="org-left">r</td>
+<td class="org-right">13</td>
+<td class="org-right">001101</td>
+<td class="org-right">6</td>
+<td class="org-right">279</td>
+</tr>
+
+<tr>
+<td class="org-left">␣hu</td>
+<td class="org-left">␣h</td>
+<td class="org-right">9</td>
+<td class="org-right">001001</td>
+<td class="org-right">6</td>
+<td class="org-right">285</td>
+</tr>
+
+<tr>
+<td class="org-left">ur</td>
+<td class="org-left">u</td>
+<td class="org-right">21</td>
+<td class="org-right">010101</td>
+<td class="org-right">6</td>
+<td class="org-right">291</td>
+</tr>
+
+<tr>
+<td class="org-left">rt␣</td>
+<td class="org-left">rt</td>
+<td class="org-right">22</td>
+<td class="org-right">010110</td>
+<td class="org-right">6</td>
+<td class="org-right">297</td>
+</tr>
+
+<tr>
+<td class="org-left">␣th</td>
+<td class="org-left">␣t</td>
+<td class="org-right">15</td>
+<td class="org-right">001111</td>
+<td class="org-right">6</td>
+<td class="org-right">303</td>
+</tr>
+
+<tr>
+<td class="org-left">he␣</td>
+<td class="org-left">he</td>
+<td class="org-right">10</td>
+<td class="org-right">001010</td>
+<td class="org-right">6</td>
+<td class="org-right">309</td>
+</tr>
+
+<tr>
+<td class="org-left">␣he</td>
+<td class="org-left">␣h</td>
+<td class="org-right">9</td>
+<td class="org-right">001001</td>
+<td class="org-right">6</td>
+<td class="org-right">315</td>
+</tr>
+
+<tr>
+<td class="org-left">ear</td>
+<td class="org-left">ea</td>
+<td class="org-right">11</td>
+<td class="org-right">001011</td>
+<td class="org-right">6</td>
+<td class="org-right">321</td>
+</tr>
+
+<tr>
+<td class="org-left">rt␣t</td>
+<td class="org-left">rt␣</td>
+<td class="org-right">41</td>
+<td class="org-right">101001</td>
+<td class="org-right">6</td>
+<td class="org-right">327</td>
+</tr>
+
+<tr>
+<td class="org-left">tha</td>
+<td class="org-left">th</td>
+<td class="org-right">16</td>
+<td class="org-right">010000</td>
+<td class="org-right">6</td>
+<td class="org-right">333</td>
+</tr>
+
+<tr>
+<td class="org-left">at␣</td>
+<td class="org-left">at</td>
+<td class="org-right">18</td>
+<td class="org-right">010010</td>
+<td class="org-right">6</td>
+<td class="org-right">339</td>
+</tr>
+
+<tr>
+<td class="org-left">␣l</td>
+<td class="org-left">␣</td>
+<td class="org-right">5</td>
+<td class="org-right">000101</td>
+<td class="org-right">6</td>
+<td class="org-right">345</td>
+</tr>
+
+<tr>
+<td class="org-left">l</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">00000001101100</td>
+<td class="org-right">14</td>
+<td class="org-right">359</td>
+</tr>
+
+<tr>
+<td class="org-left">ov</td>
+<td class="org-left">o</td>
+<td class="org-right">2</td>
+<td class="org-right">000010</td>
+<td class="org-right">6</td>
+<td class="org-right">365</td>
+</tr>
+
+<tr>
+<td class="org-left">ves</td>
+<td class="org-left">ve</td>
+<td class="org-right">36</td>
+<td class="org-right">100100</td>
+<td class="org-right">6</td>
+<td class="org-right">371</td>
+</tr>
+
+<tr>
+<td class="org-left">s␣</td>
+<td class="org-left">s</td>
+<td class="org-right">24</td>
+<td class="org-right">011000</td>
+<td class="org-right">6</td>
+<td class="org-right">377</td>
+</tr>
+
+<tr>
+<td class="org-left">␣yo</td>
+<td class="org-left">␣y</td>
+<td class="org-right">25</td>
+<td class="org-right">011001</td>
+<td class="org-right">6</td>
+<td class="org-right">383</td>
+</tr>
+
+<tr>
+<td class="org-left">ou.</td>
+<td class="org-left">ou</td>
+<td class="org-right">27</td>
+<td class="org-right">011011</td>
+<td class="org-right">6</td>
+<td class="org-right">389</td>
+</tr>
+
+<tr>
+<td class="org-left">.</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">00000000101110</td>
+<td class="org-right">14</td>
+<td class="org-right">403</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Well, results (\(l = 403\) bits) are clearly worse than they were with
+previous coding algorithms. On the contrary, LZW implementation is
+pretty simple and straight-forward. I assume that the biggest
+problem of LZW here is the big variety of new symbols (rather big) comparing to
+the length of input data &#x2013; we've spent a lot of bits to transmit
+new characters, especially coding escape symbol. Should perform
+better then lz77 on bigger datasets.
+</p>
+
+<p>
+For comparison i've taken this phrase that's 74 words and 500 bytes
+of lorem ipsum text:
+</p>
+
+<blockquote>
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras ornare
+diam nec interdum mollis. Phasellus tortor felis, dapibus eu
+bibendum eu, commodo quis erat. Vestibulum fringilla, purus semper
+eleifend laoreet, sem dui volutpat lectus, sed ullamcorper ante
+neque id lectus. Nulla ullamcorper egestas nisl, at convallis leo
+tempus vel. Sed mi lacus, aliquam ullamcorper purus vitae, vulputate
+dignissim ipsum. Nam in est eu quam maximus blandit. Integer nec
+iaculis felis. Vestibulum ut cras amet.
+</p>
+</blockquote>
+
+<p>
+Here's a comparison of LZW/LZ77 with different window sizes and
+universal codes. Maximum windows size is 4000 (500 bytes):
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">\(Algorithm\)</th>
+<th scope="col" class="org-left">\(W\)</th>
+<th scope="col" class="org-right">\(Universal Code\)</th>
+<th scope="col" class="org-right">\(Total bits\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">LZW</td>
+<td class="org-left">∅</td>
+<td class="org-right">∅</td>
+<td class="org-right">2617</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Unary</td>
+<td class="org-right">500</td>
+<td class="org-right">2761</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Unary</td>
+<td class="org-right">1000</td>
+<td class="org-right">2761</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Unary</td>
+<td class="org-right">2000</td>
+<td class="org-right">2761</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Unary</td>
+<td class="org-right">4000</td>
+<td class="org-right">2761</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">500</td>
+<td class="org-right">2835</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">1000</td>
+<td class="org-right">2835</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">2000</td>
+<td class="org-right">2835</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">4000</td>
+<td class="org-right">2835</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Unary</td>
+<td class="org-right">200</td>
+<td class="org-right">2932</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Elias</td>
+<td class="org-right">500</td>
+<td class="org-right">2949</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Elias</td>
+<td class="org-right">1000</td>
+<td class="org-right">2949</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Elias</td>
+<td class="org-right">2000</td>
+<td class="org-right">2949</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Elias</td>
+<td class="org-right">4000</td>
+<td class="org-right">2949</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">200</td>
+<td class="org-right">3021</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Unary</td>
+<td class="org-right">100</td>
+<td class="org-right">3048</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">100</td>
+<td class="org-right">3132</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Elias</td>
+<td class="org-right">200</td>
+<td class="org-right">3148</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Unary</td>
+<td class="org-right">50</td>
+<td class="org-right">3283</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Elias</td>
+<td class="org-right">100</td>
+<td class="org-right">3305</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Levenshtein</td>
+<td class="org-right">50</td>
+<td class="org-right">3346</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-left">Elias</td>
+<td class="org-right">50</td>
+<td class="org-right">3591</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Interestingly, unary universal coding performs on average better
+than levenshtein/elias. And most importantly, our assumption
+appeared to be correct &#x2013; LZW saves us \(144\) bits (0.34 percent).
+</p>
+</div>
+</div>
 <div id="footnotes">
 <h2 class="footnotes">Footnotes: </h2>
 <div id="text-footnotes">
@@ -2218,7 +2978,7 @@ result among experiments for now.
 </div></div>
 <div id="postamble" class="status">
 <p class="author">Author: Volkhov Mikhail, M3338</p>
-<p class="date">Created: 2016-12-15 Thu 17:10</p>
+<p class="date">Created: 2016-12-16 Fri 16:11</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

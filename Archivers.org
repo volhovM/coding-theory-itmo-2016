@@ -380,6 +380,126 @@
 
   So in conclusion we've achieved $l = 337$ bits, which is the best
   result among experiments for now.
+* LZW
+  I've implemented LZW algorithm with escape symbol and matched it
+  with the test proverb (if we cannot...), got 291 bit as in the
+  textbook. Here are the result on the real proverb:
+
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
+  | $Dictionary$ | $Match$ | $Dict index$ |     $CodeWord$ | $Bits$ | $Total$ |
+  |--------------+---------+--------------+----------------+--------+---------|
+  | L            |         |            0 |       01001100 |      8 |       8 |
+  | o            |         |            0 |       01101111 |      8 |      16 |
+  | v            |         |            0 |      001110110 |      9 |      25 |
+  | e            |         |            0 |     0001100101 |     10 |      35 |
+  | ␣            |         |            0 |     0001011111 |     10 |      45 |
+  | t            |         |            0 |    00001110100 |     11 |      56 |
+  | h            |         |            0 |    00001101000 |     11 |      67 |
+  | e␣           | e       |            4 |            100 |      3 |      70 |
+  | ␣h           | ␣       |            5 |            101 |      3 |      73 |
+  | he           | h       |            7 |           0111 |      4 |      77 |
+  | ea           | e       |            4 |           0100 |      4 |      81 |
+  | a            |         |            0 |   000001100001 |     12 |      93 |
+  | r            |         |            0 |   000001110010 |     12 |     105 |
+  | t␣           | t       |            6 |           0110 |      4 |     109 |
+  | ␣t           | ␣       |            5 |           0101 |      4 |     113 |
+  | th           | t       |            6 |           0110 |      4 |     117 |
+  | ha           | h       |            7 |           0111 |      4 |     121 |
+  | at           | a       |           12 |          01100 |      5 |     126 |
+  | t␣h          | t␣      |           14 |          01110 |      5 |     131 |
+  | hu           | h       |            7 |          00111 |      5 |     136 |
+  | u            |         |            0 |  0000001110101 |     13 |     149 |
+  | rt           | r       |           13 |          01101 |      5 |     154 |
+  | ts           | t       |            6 |          00110 |      5 |     159 |
+  | s            |         |            0 |  0000001110011 |     13 |     172 |
+  | ␣y           | ␣       |            5 |          00101 |      5 |     177 |
+  | y            |         |            0 |  0000001111001 |     13 |     190 |
+  | ou           | o       |            2 |          00010 |      5 |     195 |
+  | u,           | u       |           21 |          10101 |      5 |     200 |
+  | ,            |         |            0 |  0000000101100 |     13 |     213 |
+  | ␣b           | ␣       |            5 |          00101 |      5 |     218 |
+  | b            |         |            0 |  0000001100010 |     13 |     231 |
+  | ut           | u       |           21 |          10101 |      5 |     236 |
+  | t␣n          | t␣      |           14 |          01110 |      5 |     241 |
+  | n            |         |            0 | 00000001101110 |     14 |     255 |
+  | ev           | e       |            4 |         000100 |      6 |     261 |
+  | ve           | v       |            3 |         000011 |      6 |     267 |
+  | er           | e       |            4 |         000100 |      6 |     273 |
+  | r␣           | r       |           13 |         001101 |      6 |     279 |
+  | ␣hu          | ␣h      |            9 |         001001 |      6 |     285 |
+  | ur           | u       |           21 |         010101 |      6 |     291 |
+  | rt␣          | rt      |           22 |         010110 |      6 |     297 |
+  | ␣th          | ␣t      |           15 |         001111 |      6 |     303 |
+  | he␣          | he      |           10 |         001010 |      6 |     309 |
+  | ␣he          | ␣h      |            9 |         001001 |      6 |     315 |
+  | ear          | ea      |           11 |         001011 |      6 |     321 |
+  | rt␣t         | rt␣     |           41 |         101001 |      6 |     327 |
+  | tha          | th      |           16 |         010000 |      6 |     333 |
+  | at␣          | at      |           18 |         010010 |      6 |     339 |
+  | ␣l           | ␣       |            5 |         000101 |      6 |     345 |
+  | l            |         |            0 | 00000001101100 |     14 |     359 |
+  | ov           | o       |            2 |         000010 |      6 |     365 |
+  | ves          | ve      |           36 |         100100 |      6 |     371 |
+  | s␣           | s       |           24 |         011000 |      6 |     377 |
+  | ␣yo          | ␣y      |           25 |         011001 |      6 |     383 |
+  | ou.          | ou      |           27 |         011011 |      6 |     389 |
+  | .            |         |            0 | 00000000101110 |     14 |     403 |
+  |--------------+---------+--------------+----------------+--------+---------|
+
+  Well, results ($l = 403$ bits) are clearly worse than they were with
+  previous coding algorithms. On the contrary, LZW implementation is
+  pretty simple and straight-forward. I assume that the biggest
+  problem of LZW here is the big variety of new symbols (rather big) comparing to
+  the length of input data -- we've spent a lot of bits to transmit
+  new characters, especially coding escape symbol. Should perform
+  better then lz77 on bigger datasets.
+
+  For comparison i've taken this phrase that's 74 words and 500 bytes
+  of lorem ipsum text:
+
+  #+BEGIN_QUOTE
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras ornare
+  diam nec interdum mollis. Phasellus tortor felis, dapibus eu
+  bibendum eu, commodo quis erat. Vestibulum fringilla, purus semper
+  eleifend laoreet, sem dui volutpat lectus, sed ullamcorper ante
+  neque id lectus. Nulla ullamcorper egestas nisl, at convallis leo
+  tempus vel. Sed mi lacus, aliquam ullamcorper purus vitae, vulputate
+  dignissim ipsum. Nam in est eu quam maximus blandit. Integer nec
+  iaculis felis. Vestibulum ut cras amet.
+  #+END_QUOTE
+
+  Here's a comparison of LZW/LZ77 with different window sizes and
+  universal codes. Maximum windows size is 4000 (500 bytes):
+
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
+  | $Algorithm$ | $W$         | $Universal Code$ | $Total bits$ |
+  |-------------+-------------+------------------+--------------|
+  | LZW         | ∅           |                ∅ |         2617 |
+  | LZ77        | Unary       |              500 |         2761 |
+  | LZ77        | Unary       |             1000 |         2761 |
+  | LZ77        | Unary       |             2000 |         2761 |
+  | LZ77        | Unary       |             4000 |         2761 |
+  | LZ77        | Levenshtein |              500 |         2835 |
+  | LZ77        | Levenshtein |             1000 |         2835 |
+  | LZ77        | Levenshtein |             2000 |         2835 |
+  | LZ77        | Levenshtein |             4000 |         2835 |
+  | LZ77        | Unary       |              200 |         2932 |
+  | LZ77        | Elias       |              500 |         2949 |
+  | LZ77        | Elias       |             1000 |         2949 |
+  | LZ77        | Elias       |             2000 |         2949 |
+  | LZ77        | Elias       |             4000 |         2949 |
+  | LZ77        | Levenshtein |              200 |         3021 |
+  | LZ77        | Unary       |              100 |         3048 |
+  | LZ77        | Levenshtein |              100 |         3132 |
+  | LZ77        | Elias       |              200 |         3148 |
+  | LZ77        | Unary       |               50 |         3283 |
+  | LZ77        | Elias       |              100 |         3305 |
+  | LZ77        | Levenshtein |               50 |         3346 |
+  | LZ77        | Elias       |               50 |         3591 |
+
+  Interestingly, unary universal coding performs on average better
+  than levenshtein/elias. And most importantly, our assumption
+  appeared to be correct -- LZW saves us $144$ bits (0.34 percent).
 * Footnotes
 [fn:1] https://en.wikipedia.org/wiki/Arithmetic_coding#Precision_and_renormalization
 [fn:2] http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf

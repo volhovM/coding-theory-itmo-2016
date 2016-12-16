@@ -8,7 +8,7 @@
 
 -- | Homework 3
 
-module Archivers () where
+module Archivers (lz77Other,loremIpsum) where
 
 import qualified Base                  as B (Show (..))
 import           Control.Exception     (assert)
@@ -19,7 +19,7 @@ import           Data.Bifunctor        (first, second)
 import           Data.Bits             (testBit)
 import qualified Data.ByteString       as BS
 import qualified Data.ByteString.Char8 as BSC
-import           Data.List             (dropWhileEnd, nub)
+import           Data.List             (dropWhileEnd, findIndex, nub, (!!))
 import qualified Data.Map.Strict       as M
 import           Data.Maybe            (fromJust)
 import           Data.Number.BigFloat  (BigFloat (..), Prec50, PrecPlus20)
@@ -43,6 +43,16 @@ proverb :: ByteString
 proverb =
     encodeUtf8
         ("Love_the_heart_that_hurts_you,_but_never_hurt_the_heart_that_loves_you." :: Text)
+
+testProverb :: ByteString
+testProverb =
+    encodeUtf8
+        ("if_we_cannot_do_as_we_would_we_should_do_as_we_can" :: Text)
+
+loremIpsum :: ByteString
+loremIpsum = encodeUtf8 (
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras ornare diam nec interdum mollis. Phasellus tortor felis, dapibus eu bibendum eu, commodo quis erat. Vestibulum fringilla, purus semper eleifend laoreet, sem dui volutpat lectus, sed ullamcorper ante neque id lectus. Nulla ullamcorper egestas nisl, at convallis leo tempus vel. Sed mi lacus, aliquam ullamcorper purus vitae, vulputate dignissim ipsum. Nam in est eu quam maximus blandit. Integer nec iaculis felis. Vestibulum ut cras amet. " :: Text)
+
 
 newtype Logger w a = Logger
     { getLogger :: Writer [w] a
@@ -369,7 +379,7 @@ lz77Encode uni bs w = lz77Do uni bs w 0
 execLz77 :: (Int -> [Bool]) -> ByteString -> Int -> (((), LZ77State), [LZ77Trace])
 execLz77 u x w = runWriter $ (runStateT (lz77Encode u x w) (LZ77State [] []))
 
-lz77Other = map (\(u,w) -> (toUniS u, w, exec (toUni u) w)) testData
+lz77Other x = map (\(u,w) -> (toUniS u, w, exec (toUni u) w)) testData
   where
     toUni 0 = unar
     toUni 1 = mon
@@ -377,5 +387,90 @@ lz77Other = map (\(u,w) -> (toUniS u, w, exec (toUni u) w)) testData
     toUniS 0 = "Unary"
     toUniS 1 = "Levenshtein"
     toUniS 2 = "Elias"
-    testData = [(uni, w) | uni <- [0..2], w <- [45,50..75]]
-    exec uni w = (execLz77 uni proverb w) ^. _1 . _2 . lzWord . to length
+    testData = [(uni, w) | uni <- [0..2], w <- [50,100,200,500,1000,2000,4000]]
+    exec uni w = (execLz77 uni x w) ^. _1 . _2 . lzWord . to length
+
+----------------------------------------------------------------------------
+-- LZ78 (LZW)
+----------------------------------------------------------------------------
+
+data LzwState = LzwState
+    { _lzwDict :: [[Word8]]
+    , _lzwWord :: [Bool]
+    } deriving Show
+
+makeLenses ''LzwState
+
+data LzwTrace = LzwTrace
+    { lzwNewWord   :: Maybe String
+    , lzwMatch     :: String
+    , lzwWordId    :: Int
+    , lzwCodeWord  :: [Bool]
+    , lzwBits      :: Int
+    , lzwMsgLength :: Int
+    }
+
+instance Show LzwTrace where
+    show LzwTrace {..} =
+        intercalate
+            "|"
+            [ ""
+            , fromMaybe "" lzwNewWord
+            , lzwMatch
+            , show lzwWordId
+            , concatMap showBool lzwCodeWord
+            , show lzwBits
+            , show lzwMsgLength
+            , ""
+            ]
+      where
+        showBool False = "0"
+        showBool True  = "1"
+
+type LzwM a = StateT LzwState (Writer [LzwTrace]) a
+
+
+lzwDo :: BS.ByteString -> Int -> LzwM ()
+lzwDo input i | i >= BS.length input = pure ()
+lzwDo input i = do
+    matchIndex <- uses lzwDict workingInputs
+    (match :: [Word8]) <- uses lzwDict (!! matchIndex)
+    let matchLen | match == [92] = 0
+                 | otherwise = length match
+    dictSizeLog <-
+        uses lzwDict $ ceiling . log2' . pred . fromIntegral . length
+    let lzwCodeWord = convertToBits matchIndex dictSizeLog ++
+            (if matchIndex == 0
+             then convertToBits (fromJust $ head input') 8
+             else [])
+        lzwBits = length $ lzwCodeWord
+    lzwWord <>= lzwCodeWord
+    let newWord = let w = take (matchLen + 1) input'
+                  in bool (Just w) Nothing (w == match)
+        lzwNewWord = fromWord8 <$> newWord
+        lzwWordId = matchIndex
+        lzwMatch | match == [92] = ""
+                 | otherwise = fromWord8 match
+    lzwMsgLength <- uses lzwWord length
+    whenJust newWord $ \w -> lzwDict <>= [w]
+    tell $ [LzwTrace{..}]
+    lzwDo input $ i + (bool (length match) 1 $ matchIndex == 0)
+  where
+    workingInputs :: [[Word8]] -> Int
+    workingInputs dict =
+        fromMaybe 0 $
+        getLast $
+        mconcat $
+        map Last $
+        map (\n -> findIndex (\w -> length w == n && w `isPrefixOf` input') dict)
+            [0..length dict-1]
+    input' = BS.unpack $ BS.drop i input
+
+lzwEncode :: BS.ByteString -> LzwM ()
+lzwEncode bs = lzwDo bs 0
+
+execLzw :: ByteString -> (((), LzwState), [LzwTrace])
+execLzw x = runWriter $ (runStateT (lzwEncode x) (LzwState [BS.unpack "\\"] []))
+
+main :: IO ()
+main = print $ lz77Other loremIpsum
