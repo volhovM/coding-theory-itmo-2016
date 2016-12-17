@@ -12,8 +12,8 @@ module Archivers (lz77Other,loremIpsum) where
 
 import qualified Base                  as B (Show (..))
 import           Control.Exception     (assert)
-import           Control.Lens          (makeLenses, to, use, uses, (%=), (.=), (<>=),
-                                        (^.), _1, _2)
+import           Control.Lens          (makeLenses, to, use, uses, (%=), (+=), (.=),
+                                        (<>=), (^.), _1, _2)
 import           Control.Monad.Writer  (MonadWriter, Writer, runWriter, tell)
 import           Data.Bifunctor        (first, second)
 import           Data.Bits             (testBit)
@@ -127,13 +127,14 @@ data ArithmState = ArithmState
     , _aHigh    :: Word16
     , _aWord    :: [Bool]
     , _aLetters :: [Word8]
-    }
+    , _aGLog    :: Double
+    } deriving Show
 
 makeLenses ''ArithmState
 
 data ArithmTrace = ArithmTrace
     { aCurChar   :: [Char]
-    , aProb      :: Double
+    , aProb      :: Rational
     , aCodeWord  :: String
     , aMsgLength :: Int
     }
@@ -144,24 +145,26 @@ instance Show ArithmTrace where
     show ArithmTrace {..} =
         intercalate
             "|"
-            [aCurChar, showGFloat (Just 4) aProb "", aCodeWord, show aMsgLength]
+            ["", aCurChar, show aProb, aCodeWord, show aMsgLength, ""]
 
 convertToBits :: (Bits a) => a -> Int -> [Bool]
 convertToBits x i = reverse $ map (\i -> testBit x i) [0 .. i-1]
 
-arithmStep :: Map Word8 Double -> Word8 -> ArithM ()
+arithmStep :: Map Word8 Rational -> Word8 -> ArithM ()
 arithmStep prob w = do
     low <- use aLow
     (delta :: Double) <- uses aHigh $ fromIntegral . (\x -> x - low)
-    let letter = bool 0xff w (M.member w prob) -- choose escape if not present
+    let member = M.member w prob
+        letter = bool 0xff w member
+        cast = fromRational . toRational
         p, p' :: Word16
         p = round $
             delta *
             M.foldrWithKey
-                (\w' pr acc -> bool acc (acc + pr) (w' < letter))
+                (\w' pr acc -> bool acc (acc + cast pr) (w' < letter))
                 0.0
                 prob
-        p' = p + round (delta * prob M.! letter)
+        p' = p + round (delta * cast (prob M.! letter))
         matches =
             maximum $ 0 :
             filter
@@ -173,30 +176,36 @@ arithmStep prob w = do
         high' | matches == 0 = p'
               | otherwise = let s = shiftL p' matches
                             in s .|. (s - 1)
+--    traceShowM p
+--    traceShowM p'
+--    traceShowM sameBits
     aLow .= low'
     aHigh .= high'
     aWord <>= sameBits
-    aLetters %= (letter:)
+    when member $ aLetters %= (letter:)
     l <- uses aWord length
-    tell $ [ArithmTrace [chr' letter] (prob M.! letter) (map (bool '0' '1') sameBits) l]
+    aGLog += (- (log2 (cast $ prob M.! letter)))
+    tell $ [ArithmTrace (chr' letter) (prob M.! letter) (map (bool '0' '1') sameBits) l]
 
     newLetters <- uses aLetters $ \letters -> filter (not . (`elem` letters)) [0..0xff]
     let probWithEscape =
-            M.fromList $ map (\i -> (i, 1/(fromIntegral $ length newLetters))) newLetters
+            M.fromList $ map (\i -> (i, 1 / (fromIntegral $ length newLetters))) newLetters
     when (letter /= w) $ arithmStep probWithEscape w
   where
-    chr' 0xff = '\\'
-    chr' x    = chr $ fromIntegral x
+    chr' 0xff = "esc"
+    chr' x    = [chr $ fromIntegral x]
 
 finalizeArith :: ArithM ()
 finalizeArith = do
     high <- uses aHigh fromIntegral
     low <- uses aLow fromIntegral
+    curL <- uses aWord length
     let delta, deltaP :: Double
         delta = high - low
         deltaP = delta / 0xffff
-        bits = take (ceiling (- (log2 $ deltaP))) $
-            convertToBits @Word16 (round $ low + delta / 2) 16
+    bits <- uses aGLog $ \l ->
+        take (1 + (ceiling l) - curL) $
+        convertToBits @Word16 (round $ low + delta / 2) 16
     aWord <>= bits
     l <- uses aWord length
     tell $ [ArithmTrace "final" 0 (map (bool '0' '1') bits) l]
@@ -213,7 +222,8 @@ runAdaptiveArithm input = do
         arithmStep probM $ BS.index input k
     finalizeArith
 
-execAdaptiveArithm x = runWriter $ (runStateT (runAdaptiveArithm x) (ArithmState 0 0xffff [] []))
+execAdaptiveArithm x =
+    runWriter $ (runStateT (runAdaptiveArithm x) (ArithmState 0 0xffff [] [] 0))
 
 ----------------------------------------------------------------------------
 -- Enumerative
@@ -471,6 +481,14 @@ lzwEncode bs = lzwDo bs 0
 
 execLzw :: ByteString -> (((), LzwState), [LzwTrace])
 execLzw x = runWriter $ (runStateT (lzwEncode x) (LzwState [BS.unpack "\\"] []))
+
+----------------------------------------------------------------------------
+-- PPMA
+----------------------------------------------------------------------------
+
+----------------------------------------------------------------------------
+-- Unrelated
+----------------------------------------------------------------------------
 
 main :: IO ()
 main = print $ lz77Other loremIpsum
