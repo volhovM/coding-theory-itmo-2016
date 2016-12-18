@@ -11,25 +11,28 @@
 
 module Archivers (lz77Other,loremIpsum) where
 
-import qualified Base                  as B (Show (..))
-import           Control.Exception     (assert)
-import           Control.Lens          (makeLenses, to, use, uses, view, (%=), (+=), (.=),
-                                        (<>=), (^.), _1, _2, _3)
-import           Control.Monad.Writer  (MonadWriter, Writer, runWriter, tell)
-import           Data.Bifunctor        (first, second)
-import           Data.Bits             (testBit)
-import qualified Data.ByteString       as BS
-import qualified Data.ByteString.Char8 as BSC
-import           Data.List             (dropWhileEnd, findIndex, last, nub, (!!))
-import qualified Data.Map.Strict       as M
-import           Data.Maybe            (fromJust, mapMaybe)
-import           Data.Number.BigFloat  (BigFloat (..), Prec50, PrecPlus20)
-import           Data.Ord              (comparing)
-import           Data.Ratio            (denominator, numerator, (%))
-import qualified Data.Text             as T
-import           Data.Word             (Word16)
-import           Numeric               (showGFloat)
-import           Universum             hiding ((%))
+import qualified Base                   as B (Show (..))
+import           Codec.Compression.GZip (CompressParams (..))
+import qualified Codec.Compression.GZip as Z
+import           Control.Exception      (assert)
+import           Control.Lens           (makeLenses, to, use, uses, view, (%=), (+=),
+                                         (.=), (<>=), (^.), _1, _2, _3)
+import           Control.Monad.Writer   (MonadWriter, Writer, runWriter, tell)
+import           Data.Bifunctor         (first, second)
+import           Data.Bits              (testBit)
+import qualified Data.ByteString        as BS
+import qualified Data.ByteString.Char8  as BSC
+import qualified Data.ByteString.Lazy   as BSL
+import           Data.List              (dropWhileEnd, findIndex, last, nub, (!!))
+import qualified Data.Map.Strict        as M
+import           Data.Maybe             (fromJust, mapMaybe)
+import           Data.Number.BigFloat   (BigFloat (..), Prec50, PrecPlus20)
+import           Data.Ord               (comparing)
+import           Data.Ratio             (denominator, numerator, (%))
+import qualified Data.Text              as T
+import           Data.Word              (Word16)
+import           Numeric                (showGFloat)
+import           Universum              hiding ((%))
 
 type String = [Char]
 
@@ -585,6 +588,123 @@ execPpm :: Int -> ByteString -> (((), PpmState), [PpmTrace])
 execPpm d x = runWriter $ (runStateT (ppmCalculate d x 0) (PpmState [] 0))
 
 ppmBytes p w = 1 + ceiling (_pGLog $ snd $ fst $ execPpm w p)
+
+----------------------------------------------------------------------------
+-- Burrows-Wheeler
+----------------------------------------------------------------------------
+
+bwTransform :: (Show a, Ord a) => [a] -> ([a], Int)
+bwTransform input = (lastCol, fromJust $ findIndex (==input) mapped)
+  where
+    n = length input
+    cycled = cycle input
+    mapped = sort $ map (\i -> take n $ drop i $ cycled) [0..n-1]
+    lastCol = map last mapped
+
+data MtfState = MtfState
+    { _mtfLetters :: [Word8]
+    , _mtfOutput  :: [Bool]
+    } deriving Show
+
+makeLenses ''MtfState
+
+data MtfTrace = MtfTrace
+    { mtfCurChar   :: Char
+    , mtfNew       :: Bool
+    , mtfDist      :: Int
+    , mtfDiff      :: Int
+    , mtfCodeWord  :: [Bool]
+    , mtfBits      :: Int
+    , mtfMsgLength :: Int
+    }
+
+instance Show MtfTrace where
+    show MtfTrace {..} =
+        intercalate
+            "|"
+            [ ""
+            , [mtfCurChar]
+            , showBool mtfNew
+            , show mtfDist
+            , show mtfDiff
+            , concatMap showBool mtfCodeWord
+            , show mtfBits
+            , show mtfMsgLength
+            , ""
+            ]
+      where
+        showBool False = "0"
+        showBool True  = "1"
+
+type MtfM a = StateT MtfState (Writer [MtfTrace]) a
+
+
+findIndexLast pred xs =
+    (\i -> length xs - i - 1) <$> (findIndex pred $ reverse xs)
+
+-- | MTF encoding, straight-forward
+mtfEncode :: (Int -> [Bool]) -> ByteString -> Int -> MtfM ()
+mtfEncode _ bs i | i >= BS.length bs = pure ()
+mtfEncode u bs i = do
+    history <- use mtfLetters
+    let c = BS.index bs i
+        mtfNew = not $ c `elem` history
+        foundIx = findIndexLast (== c) history
+        diffAbsent = (length $ nub history) + 256 - fromIntegral c
+        diffPresent i = length $ nub $ drop (i + 1) history
+        diff = maybe diffAbsent diffPresent foundIx
+        distAbsent = length history + 256 - fromIntegral c
+        dist = maybe distAbsent (\j -> i - j + 1) foundIx
+        codeWord = u $ diff + 1
+    mtfOutput <>= codeWord
+    mtfLetters <>= [c]
+    mtfMsgLength <- uses mtfOutput length
+    tell [MtfTrace (chr $ fromIntegral c) mtfNew dist diff codeWord (length codeWord) mtfMsgLength]
+    mtfEncode u bs $ succ i
+
+
+execMtf :: (Int -> [Bool]) -> ByteString -> (((), MtfState), [MtfTrace])
+execMtf u bs = runWriter $ (runStateT (mtfEncode u bs 0) (MtfState [] []))
+
+
+
+data MtfSimpleState = MtfSimpleState
+    { _mtfsLetters :: [Word8]
+    , _mtfsOutput  :: [Word8]
+    } deriving Show
+
+makeLenses ''MtfSimpleState
+
+-- Just forms the string for encoding with enumerative later
+mtfEncodeEsc :: [Word8] -> State MtfSimpleState ()
+mtfEncodeEsc [] = pure ()
+mtfEncodeEsc (c:xs) = do
+    history <- use mtfsLetters
+    let foundIx = findIndexLast (== c) history
+        diffAbsent = fromIntegral $ ord '\\'
+        diffPresent i = fromIntegral $ length $ nub $ drop (i + 1) history
+        diff :: Word8
+        diff = maybe diffAbsent diffPresent foundIx
+    mtfsOutput <>= [diff]
+    mtfsLetters <>= [c]
+    mtfEncodeEsc xs
+
+runMtfs bs = execState (mtfEncodeEsc $ BS.unpack bs) $ MtfSimpleState [] []
+
+----------------------------------------------------------------------------
+-- Zlib/Gzip
+----------------------------------------------------------------------------
+
+gzipCompress :: ByteString -> ByteString
+gzipCompress =
+    BSL.toStrict .
+    Z.compressWith
+        (Z.defaultCompressParams
+         { compressLevel = Z.bestCompression
+         , compressMemoryLevel = Z.maxMemoryLevel
+         }) .
+    BSL.fromStrict
+
 
 ----------------------------------------------------------------------------
 -- Unrelated
