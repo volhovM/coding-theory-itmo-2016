@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2016-12-18 Sun 14:54 -->
+<!-- 2016-12-18 Sun 17:13 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="viewport" content="width=device-width, initial-scale=1" />
 <title>Information theory: HW #3 solution</title>
@@ -177,6 +177,9 @@ for the JavaScript code in this tag.
 <li><a href="#orgheadline5">5. LZ77</a></li>
 <li><a href="#orgheadline6">6. LZW</a></li>
 <li><a href="#orgheadline7">7. PPM</a></li>
+<li><a href="#orgheadline8">8. Burrows-Wheeler + book stack</a></li>
+<li><a href="#orgheadline9">9. Standart archiving</a></li>
+<li><a href="#orgheadline10">10. Comparison and summary</a></li>
 </ul>
 </div>
 </div>
@@ -189,8 +192,8 @@ So the task is to implement several algorithms of data compression
 and provide reports on them. Reports will contain logs from
 algorithms that will show how it operates this data. Tables with
 explanation will be attached. I won't attach haskell snippets this
-time as they became really big and complex. Instead, i'll put it all
-to the last section of this document.
+time as they became really big and complex. Instead, i'll put it
+into another pdf and send it with this one.
 </p>
 
 <p>
@@ -204,9 +207,9 @@ Proverb correspondent to my task is the following:
 </blockquote>
 
 <p>
-It's in english that's why i'll stick to utf-8/ascii encoding as
-byte representation. It contains \(71\) letters, so in general it's
-\(568\) bytes if used without any coding.
+It's in english that's why I'll stick to utf-8/ascii encoding as
+byte representation. It contains \(71\) letters, so it takes \(568\)
+bytes if used without any coding.
 </p>
 
 <p>
@@ -214,9 +217,9 @@ Remark: sorry, but my rendering format doesn't support proper
 underscore marks (_) &#x2013; they turn into underlines and i see no way
 to escape them. "␣" can be used instead, but it's too ugly. I'll use
 it when ambiguous, and just leave empty place in other places. Yes,
-and sorry for the tables. Both when they're are and are not
-full-width, they are ugly. Rule of thumb: use the same table
-formatting as in the textbook. So i choose to use full width.
+and sorry for the tables. They're ugly both when they're are and are
+not full-width. Rule of thumb: use the same table formatting as in
+the textbook. So I choose to use full width.
 </p>
 </div>
 </div>
@@ -1652,7 +1655,7 @@ proverb's length.
 <tr>
 <th scope="col" class="org-right">\(Flag\)</th>
 <th scope="col" class="org-left">\(Substring\)</th>
-<th scope="col" class="org-right">\(l\)</th>
+<th scope="col" class="org-right">\(d\)</th>
 <th scope="col" class="org-right">\(l\)</th>
 <th scope="col" class="org-right">\(Codeword\)</th>
 <th scope="col" class="org-right">\(Bits\)</th>
@@ -2045,7 +2048,7 @@ proverb's length.
 <p>
 Here's also results for other universal codes (smaller windows
 affect length dramatically because of that "the heart that" chunk in
-the end. Best performance of levenshtain is achieved because its
+the end. Best performance of levenshtein is achieved because its
 encoding of "1" takes only 1 bit (compared to 2 bits of elias) and
 it's more effective then unary on bigger numbers. In general i
 expect elias to perform better.
@@ -2232,8 +2235,8 @@ textbook. Here are the result on the real proverb:
 <tr>
 <th scope="col" class="org-left">\(Dictionary\)</th>
 <th scope="col" class="org-left">\(Match\)</th>
-<th scope="col" class="org-right">\(Dict index\)</th>
-<th scope="col" class="org-right">\(CodeWord\)</th>
+<th scope="col" class="org-right">\(Dict\) \(index\)</th>
+<th scope="col" class="org-right">\(Codeword\)</th>
 <th scope="col" class="org-right">\(Bits\)</th>
 <th scope="col" class="org-right">\(Total\)</th>
 </tr>
@@ -2988,7 +2991,7 @@ p_t(a|s) = \frac{τ_t(s,a)}{τ_t(s)+1} = \frac{1}{4+1} = \frac{1}{5}
 \end{align*}
 
 <p>
-Textbook says that correct probability is \frac{1}{4}. So that's a
+Textbook says that correct probability is \(\frac{1}{4}\). So that's a
 mistake in my opinion. The correct length of coded string is this
 \(249\) bits, not \(250\).
 </p>
@@ -3692,6 +3695,920 @@ symbols) are pretty rare.
 </p>
 </div>
 </div>
+<div id="outline-container-orgheadline8" class="outline-2">
+<h2 id="orgheadline8"><span class="section-number-2">8</span> Burrows-Wheeler + book stack</h2>
+<div class="outline-text-2" id="text-8">
+<p>
+Implemented algorithm uses Burrows-Wheeler transformation with MTF
+(book stack) algorithm together to obtain results. That's a first
+round, straight-forward MTF without escapes.
+</p>
+
+<p>
+One thing to mention before is that I'm encoding \(diff+1\) where
+\(diff\) is a number of different words between current and previous
+occurences of the char because universal coding work only in range
+\({1..}\), whereas \(diff\) can be zero (example &#x2013; <code>aaaa</code>). Used
+universal coding is monotonic (levenshtein). When character is not
+in the history, i'm assuming there's a list of all ascii characters
+(length 256) before the processed string.
+</p>
+
+<p>
+First, let's perform the transformation. Here's the result:
+</p>
+
+<p>
+<code>uu.,eertttttetsseehh_hhvhhvvntttt______yyLleaauuteaaurrr____roohhboeo__</code>
+</p>
+
+<p>
+And the number of this string in sorted list is 3 (index 2). Here's
+a table that shows how algorithm worked:
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">\(Char\)</th>
+<th scope="col" class="org-right">\(New\)</th>
+<th scope="col" class="org-right">\(Dist\)</th>
+<th scope="col" class="org-right">\(Diff\)</th>
+<th scope="col" class="org-right">\(Code\) \(word\)</th>
+<th scope="col" class="org-right">\(Bits\)</th>
+<th scope="col" class="org-right">\(Total\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">1</td>
+<td class="org-right">139</td>
+<td class="org-right">139</td>
+<td class="org-right">1110110001100</td>
+<td class="org-right">13</td>
+<td class="org-right">13</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">15</td>
+</tr>
+
+<tr>
+<td class="org-left">.</td>
+<td class="org-right">1</td>
+<td class="org-right">212</td>
+<td class="org-right">211</td>
+<td class="org-right">1110111010100</td>
+<td class="org-right">13</td>
+<td class="org-right">28</td>
+</tr>
+
+<tr>
+<td class="org-left">,</td>
+<td class="org-right">1</td>
+<td class="org-right">215</td>
+<td class="org-right">214</td>
+<td class="org-right">1110111010111</td>
+<td class="org-right">13</td>
+<td class="org-right">41</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">1</td>
+<td class="org-right">159</td>
+<td class="org-right">158</td>
+<td class="org-right">1110110011111</td>
+<td class="org-right">13</td>
+<td class="org-right">54</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">56</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">1</td>
+<td class="org-right">148</td>
+<td class="org-right">146</td>
+<td class="org-right">1110110010011</td>
+<td class="org-right">13</td>
+<td class="org-right">69</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">1</td>
+<td class="org-right">147</td>
+<td class="org-right">145</td>
+<td class="org-right">1110110010010</td>
+<td class="org-right">13</td>
+<td class="org-right">82</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">84</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">86</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">88</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">90</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">0</td>
+<td class="org-right">8</td>
+<td class="org-right">2</td>
+<td class="org-right">101</td>
+<td class="org-right">3</td>
+<td class="org-right">93</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">3</td>
+<td class="org-right">1</td>
+<td class="org-right">100</td>
+<td class="org-right">3</td>
+<td class="org-right">96</td>
+</tr>
+
+<tr>
+<td class="org-left">s</td>
+<td class="org-right">1</td>
+<td class="org-right">155</td>
+<td class="org-right">147</td>
+<td class="org-right">1110110010100</td>
+<td class="org-right">13</td>
+<td class="org-right">109</td>
+</tr>
+
+<tr>
+<td class="org-left">s</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">111</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">0</td>
+<td class="org-right">5</td>
+<td class="org-right">2</td>
+<td class="org-right">101</td>
+<td class="org-right">3</td>
+<td class="org-right">114</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">116</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">1</td>
+<td class="org-right">170</td>
+<td class="org-right">159</td>
+<td class="org-right">1110110100000</td>
+<td class="org-right">13</td>
+<td class="org-right">129</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">131</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">1</td>
+<td class="org-right">181</td>
+<td class="org-right">169</td>
+<td class="org-right">1110110101010</td>
+<td class="org-right">13</td>
+<td class="org-right">144</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">0</td>
+<td class="org-right">3</td>
+<td class="org-right">1</td>
+<td class="org-right">100</td>
+<td class="org-right">3</td>
+<td class="org-right">147</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">149</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-right">1</td>
+<td class="org-right">161</td>
+<td class="org-right">147</td>
+<td class="org-right">1110110010100</td>
+<td class="org-right">13</td>
+<td class="org-right">162</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">0</td>
+<td class="org-right">3</td>
+<td class="org-right">1</td>
+<td class="org-right">100</td>
+<td class="org-right">3</td>
+<td class="org-right">165</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">167</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-right">0</td>
+<td class="org-right">4</td>
+<td class="org-right">1</td>
+<td class="org-right">100</td>
+<td class="org-right">3</td>
+<td class="org-right">170</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">172</td>
+</tr>
+
+<tr>
+<td class="org-left">n</td>
+<td class="org-right">1</td>
+<td class="org-right">174</td>
+<td class="org-right">156</td>
+<td class="org-right">1110110011101</td>
+<td class="org-right">13</td>
+<td class="org-right">185</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">17</td>
+<td class="org-right">6</td>
+<td class="org-right">110011</td>
+<td class="org-right">6</td>
+<td class="org-right">191</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">193</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">195</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">197</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">14</td>
+<td class="org-right">4</td>
+<td class="org-right">110001</td>
+<td class="org-right">6</td>
+<td class="org-right">203</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">205</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">207</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">209</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">211</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">213</td>
+</tr>
+
+<tr>
+<td class="org-left">y</td>
+<td class="org-right">1</td>
+<td class="org-right">174</td>
+<td class="org-right">146</td>
+<td class="org-right">1110110010011</td>
+<td class="org-right">13</td>
+<td class="org-right">226</td>
+</tr>
+
+<tr>
+<td class="org-left">y</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">228</td>
+</tr>
+
+<tr>
+<td class="org-left">L</td>
+<td class="org-right">1</td>
+<td class="org-right">221</td>
+<td class="org-right">192</td>
+<td class="org-right">1110111000001</td>
+<td class="org-right">13</td>
+<td class="org-right">241</td>
+</tr>
+
+<tr>
+<td class="org-left">l</td>
+<td class="org-right">1</td>
+<td class="org-right">190</td>
+<td class="org-right">161</td>
+<td class="org-right">1110110100010</td>
+<td class="org-right">13</td>
+<td class="org-right">254</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">0</td>
+<td class="org-right">27</td>
+<td class="org-right">8</td>
+<td class="org-right">1101001</td>
+<td class="org-right">7</td>
+<td class="org-right">261</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">1</td>
+<td class="org-right">203</td>
+<td class="org-right">173</td>
+<td class="org-right">1110110101110</td>
+<td class="org-right">13</td>
+<td class="org-right">274</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">276</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">0</td>
+<td class="org-right">46</td>
+<td class="org-right">14</td>
+<td class="org-right">1101111</td>
+<td class="org-right">7</td>
+<td class="org-right">283</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">285</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-right">0</td>
+<td class="org-right">17</td>
+<td class="org-right">7</td>
+<td class="org-right">1101000</td>
+<td class="org-right">7</td>
+<td class="org-right">292</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">0</td>
+<td class="org-right">7</td>
+<td class="org-right">3</td>
+<td class="org-right">110000</td>
+<td class="org-right">6</td>
+<td class="org-right">298</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">0</td>
+<td class="org-right">6</td>
+<td class="org-right">3</td>
+<td class="org-right">110000</td>
+<td class="org-right">6</td>
+<td class="org-right">304</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">306</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-right">0</td>
+<td class="org-right">6</td>
+<td class="org-right">3</td>
+<td class="org-right">110000</td>
+<td class="org-right">6</td>
+<td class="org-right">312</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">0</td>
+<td class="org-right">48</td>
+<td class="org-right">12</td>
+<td class="org-right">1101101</td>
+<td class="org-right">7</td>
+<td class="org-right">319</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">321</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">323</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">19</td>
+<td class="org-right">8</td>
+<td class="org-right">1101001</td>
+<td class="org-right">7</td>
+<td class="org-right">330</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">332</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">334</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">336</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-right">0</td>
+<td class="org-right">6</td>
+<td class="org-right">1</td>
+<td class="org-right">100</td>
+<td class="org-right">3</td>
+<td class="org-right">339</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-right">1</td>
+<td class="org-right">206</td>
+<td class="org-right">160</td>
+<td class="org-right">1110110100001</td>
+<td class="org-right">13</td>
+<td class="org-right">352</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">354</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">0</td>
+<td class="org-right">39</td>
+<td class="org-right">12</td>
+<td class="org-right">1101101</td>
+<td class="org-right">7</td>
+<td class="org-right">361</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">363</td>
+</tr>
+
+<tr>
+<td class="org-left">b</td>
+<td class="org-right">1</td>
+<td class="org-right">223</td>
+<td class="org-right">174</td>
+<td class="org-right">1110110101111</td>
+<td class="org-right">13</td>
+<td class="org-right">376</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-right">0</td>
+<td class="org-right">5</td>
+<td class="org-right">2</td>
+<td class="org-right">101</td>
+<td class="org-right">3</td>
+<td class="org-right">379</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-right">0</td>
+<td class="org-right">19</td>
+<td class="org-right">7</td>
+<td class="org-right">1101000</td>
+<td class="org-right">7</td>
+<td class="org-right">386</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-right">0</td>
+<td class="org-right">3</td>
+<td class="org-right">1</td>
+<td class="org-right">100</td>
+<td class="org-right">3</td>
+<td class="org-right">389</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">11</td>
+<td class="org-right">5</td>
+<td class="org-right">110010</td>
+<td class="org-right">6</td>
+<td class="org-right">395</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-right">0</td>
+<td class="org-right">2</td>
+<td class="org-right">0</td>
+<td class="org-right">10</td>
+<td class="org-right">2</td>
+<td class="org-right">397</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+So we get \(393\) bits in total for transmitting this sequence using
+straight-forward MTF method. Also index \(3\) from BWT will take 3
+bits if encoded using elias coding. So in total \(396\) bits. Already
+better than raw \(568\), but worse than algorithms mentioned
+before. Performance with other universal codes is worse &#x2013; \(400\) in
+total with elias and \(2975\) in total with unary (no wonder, encoding
+big numbers takes a lot).
+</p>
+
+<p>
+Let's take another approach with escape symbols and enumerative
+coding which is described in part 4.6 of the textbook.
+</p>
+
+<p>
+Running mtfs transfromation will yield this result:
+</p>
+
+<p>
+<code>esc 0 esc esc esc 0 esc esc 0 0 0 0 2 1 esc 0 2 0 esc 0 esc 1 0 esc 1 0 1 0 esc 6 0 0 0 4 0 0 0 0 0 esc 0 esc esc 8 esc 0 14 0 7 3 3 0 3 12 0 0 8 0 0 0 1 esc 0 12 0 esc 2 7 1 5 0</code>
+</p>
+
+<p>
+Coding it using enumerative coding gives us \(267\) bits (i just ran a
+function <code>enumerative</code>, it doesn't trace anything). Transferring a
+character per escape with 17 escapes in total gives us \(17 × 8 =
+  136\) bits. Summing up, we get \(267 + 136 + 3 = 406\) (remember 3 bits
+from BWT). Less than with straight-forward MTF coding. Both
+approaches are pretty simple to implement on the other hand.
+</p>
+</div>
+</div>
+<div id="outline-container-orgheadline9" class="outline-2">
+<h2 id="orgheadline9"><span class="section-number-2">9</span> Standart archiving</h2>
+<div class="outline-text-2" id="text-9">
+<p>
+Last step is try to apply some standart archiving functions to our
+proverb. I'll be really simple here and try it out with <code>GZip</code>
+algorithm from library <code>zlib</code><sup><a id="fnr.3" class="footref" href="#fn.3">3</a></sup>. It uses "Deflate" algorithm
+that's a combination of LZ77 and Huffman coding<sup><a id="fnr.4" class="footref" href="#fn.4">4</a></sup>.
+</p>
+
+<p>
+So results are pretty sad for the current proverb: \(l = 544\), only
+slightly lower than original \(568\) bits. On the other hand, lorem
+ipsum text is compressed from \(4000\) to \(2472\) bits, which is a
+significant performance boost. Small texts are not that
+representative anyways.
+</p>
+</div>
+</div>
+<div id="outline-container-orgheadline10" class="outline-2">
+<h2 id="orgheadline10"><span class="section-number-2">10</span> Comparison and summary</h2>
+<div class="outline-text-2" id="text-10">
+<p>
+Let's compare all approaches we used:
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">\(Method\)</th>
+<th scope="col" class="org-right">\(Bits\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Plain</td>
+<td class="org-right">568</td>
+</tr>
+
+<tr>
+<td class="org-left">Two pass huffman</td>
+<td class="org-right">394</td>
+</tr>
+
+<tr>
+<td class="org-left">Adaptive arithmetic</td>
+<td class="org-right">385</td>
+</tr>
+
+<tr>
+<td class="org-left">Enumerative</td>
+<td class="org-right">377</td>
+</tr>
+
+<tr>
+<td class="org-left">LZ77</td>
+<td class="org-right">337</td>
+</tr>
+
+<tr>
+<td class="org-left">LZW</td>
+<td class="org-right">403</td>
+</tr>
+
+<tr>
+<td class="org-left">PPMA</td>
+<td class="org-right">346</td>
+</tr>
+
+<tr>
+<td class="org-left">BW+MTF plain</td>
+<td class="org-right">396</td>
+</tr>
+
+<tr>
+<td class="org-left">BW+MTF enumerative</td>
+<td class="org-right">406</td>
+</tr>
+
+<tr>
+<td class="org-left">GZip</td>
+<td class="org-right">544</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+It's hard to say which one is better in general, but in our case
+LZ77 is as absolute winner (though we used a large window which is
+not suitable for real usage), PPMA is the second one (more or
+lessfair). GZip showed the worst together with LZW. We don't compare
+speed efficiency of algorithms which is important parameter,
+comparing compression rate doesn't really make the sense in general
+&#x2013; different tasks define different requirements for encoding
+algorithms. Another conclusion (that was covered in textbook too) is
+that two-pass algorithms are not that much better comparing to
+one-pass and it's clearly true based on our comparison table.
+</p>
+</div>
+</div>
 <div id="footnotes">
 <h2 class="footnotes">Footnotes: </h2>
 <div id="text-footnotes">
@@ -3704,12 +4621,20 @@ symbols) are pretty rare.
 <a href="http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf">http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf</a>
 </p></div></div>
 
+<div class="footdef"><sup><a id="fn.3" class="footnum" href="#fnr.3">3</a></sup> <div class="footpara"><p class="footpara">
+<a href="https://hackage.haskell.org/package/zlib-0.6.1.1/docs/Codec-Compression-GZip.html">https://hackage.haskell.org/package/zlib-0.6.1.1/docs/Codec-Compression-GZip.html</a>
+</p></div></div>
+
+<div class="footdef"><sup><a id="fn.4" class="footnum" href="#fnr.4">4</a></sup> <div class="footpara"><p class="footpara">
+<a href="http://zlib.net/">http://zlib.net/</a>
+</p></div></div>
+
 
 </div>
 </div></div>
 <div id="postamble" class="status">
 <p class="author">Author: Volkhov Mikhail, M3338</p>
-<p class="date">Created: 2016-12-18 Sun 14:54</p>
+<p class="date">Created: 2016-12-18 Sun 17:13</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

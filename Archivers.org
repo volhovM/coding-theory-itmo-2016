@@ -1,5 +1,4 @@
 #+LANGUAGE: en
-#+ATTR_HTML: :style line-height: 7px; width: 100%;
 #+TITLE: Information theory: HW #3 solution
 #+AUTHOR: Volkhov Mikhail, M3338
 
@@ -8,8 +7,8 @@
   and provide reports on them. Reports will contain logs from
   algorithms that will show how it operates this data. Tables with
   explanation will be attached. I won't attach haskell snippets this
-  time as they became really big and complex. Instead, i'll put it all
-  to the last section of this document.
+  time as they became really big and complex. Instead, i'll put it
+  into another pdf and send it with this one.
 
   Proverb correspondent to my task is the following:
 
@@ -17,17 +16,17 @@
   /Love the heart that hurts you, but never hurt the heart that loves you./
   #+END_QUOTE
 
-  It's in english that's why i'll stick to utf-8/ascii encoding as
-  byte representation. It contains $71$ letters, so in general it's
-  $568$ bytes if used without any coding.
+  It's in english that's why I'll stick to utf-8/ascii encoding as
+  byte representation. It contains $71$ letters, so it takes $568$
+  bytes if used without any coding.
 
   Remark: sorry, but my rendering format doesn't support proper
   underscore marks (_) -- they turn into underlines and i see no way
   to escape them. "␣" can be used instead, but it's too ugly. I'll use
   it when ambiguous, and just leave empty place in other places. Yes,
-  and sorry for the tables. Both when they're are and are not
-  full-width, they are ugly. Rule of thumb: use the same table
-  formatting as in the textbook. So i choose to use full width.
+  and sorry for the tables. They're ugly both when they're are and are
+  not full-width. Rule of thumb: use the same table formatting as in
+  the textbook. So I choose to use full width.
 * Two-pass huffman coding
   I've implemented regural huffman coding, as it can be seen from the
   first table: code words of the same length are sorted
@@ -305,7 +304,7 @@
   proverb's length.
 
   #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
-  | $Flag$ | $Substring$      | $l$ | $l$ |       $Codeword$ | $Bits$ | $Total$ |
+  | $Flag$ | $Substring$      | $d$ | $l$ |       $Codeword$ | $Bits$ | $Total$ |
   |--------+------------------+-----+-----+------------------+--------+---------|
   |      0 | L                |     |   0 |        001001100 |      9 |       9 |
   |      0 | o                |     |   0 |        001101111 |      9 |      18 |
@@ -349,7 +348,7 @@
 
   Here's also results for other universal codes (smaller windows
   affect length dramatically because of that "the heart that" chunk in
-  the end. Best performance of levenshtain is achieved because its
+  the end. Best performance of levenshtein is achieved because its
   encoding of "1" takes only 1 bit (compared to 2 bits of elias) and
   it's more effective then unary on bigger numbers. In general i
   expect elias to perform better.
@@ -388,65 +387,65 @@
   textbook. Here are the result on the real proverb:
 
   #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
-  | $Dictionary$ | $Match$ | $Dict index$ |     $CodeWord$ | $Bits$ | $Total$ |
-  |--------------+---------+--------------+----------------+--------+---------|
-  | L            |         |            0 |       01001100 |      8 |       8 |
-  | o            |         |            0 |       01101111 |      8 |      16 |
-  | v            |         |            0 |      001110110 |      9 |      25 |
-  | e            |         |            0 |     0001100101 |     10 |      35 |
-  | ␣            |         |            0 |     0001011111 |     10 |      45 |
-  | t            |         |            0 |    00001110100 |     11 |      56 |
-  | h            |         |            0 |    00001101000 |     11 |      67 |
-  | e␣           | e       |            4 |            100 |      3 |      70 |
-  | ␣h           | ␣       |            5 |            101 |      3 |      73 |
-  | he           | h       |            7 |           0111 |      4 |      77 |
-  | ea           | e       |            4 |           0100 |      4 |      81 |
-  | a            |         |            0 |   000001100001 |     12 |      93 |
-  | r            |         |            0 |   000001110010 |     12 |     105 |
-  | t␣           | t       |            6 |           0110 |      4 |     109 |
-  | ␣t           | ␣       |            5 |           0101 |      4 |     113 |
-  | th           | t       |            6 |           0110 |      4 |     117 |
-  | ha           | h       |            7 |           0111 |      4 |     121 |
-  | at           | a       |           12 |          01100 |      5 |     126 |
-  | t␣h          | t␣      |           14 |          01110 |      5 |     131 |
-  | hu           | h       |            7 |          00111 |      5 |     136 |
-  | u            |         |            0 |  0000001110101 |     13 |     149 |
-  | rt           | r       |           13 |          01101 |      5 |     154 |
-  | ts           | t       |            6 |          00110 |      5 |     159 |
-  | s            |         |            0 |  0000001110011 |     13 |     172 |
-  | ␣y           | ␣       |            5 |          00101 |      5 |     177 |
-  | y            |         |            0 |  0000001111001 |     13 |     190 |
-  | ou           | o       |            2 |          00010 |      5 |     195 |
-  | u,           | u       |           21 |          10101 |      5 |     200 |
-  | ,            |         |            0 |  0000000101100 |     13 |     213 |
-  | ␣b           | ␣       |            5 |          00101 |      5 |     218 |
-  | b            |         |            0 |  0000001100010 |     13 |     231 |
-  | ut           | u       |           21 |          10101 |      5 |     236 |
-  | t␣n          | t␣      |           14 |          01110 |      5 |     241 |
-  | n            |         |            0 | 00000001101110 |     14 |     255 |
-  | ev           | e       |            4 |         000100 |      6 |     261 |
-  | ve           | v       |            3 |         000011 |      6 |     267 |
-  | er           | e       |            4 |         000100 |      6 |     273 |
-  | r␣           | r       |           13 |         001101 |      6 |     279 |
-  | ␣hu          | ␣h      |            9 |         001001 |      6 |     285 |
-  | ur           | u       |           21 |         010101 |      6 |     291 |
-  | rt␣          | rt      |           22 |         010110 |      6 |     297 |
-  | ␣th          | ␣t      |           15 |         001111 |      6 |     303 |
-  | he␣          | he      |           10 |         001010 |      6 |     309 |
-  | ␣he          | ␣h      |            9 |         001001 |      6 |     315 |
-  | ear          | ea      |           11 |         001011 |      6 |     321 |
-  | rt␣t         | rt␣     |           41 |         101001 |      6 |     327 |
-  | tha          | th      |           16 |         010000 |      6 |     333 |
-  | at␣          | at      |           18 |         010010 |      6 |     339 |
-  | ␣l           | ␣       |            5 |         000101 |      6 |     345 |
-  | l            |         |            0 | 00000001101100 |     14 |     359 |
-  | ov           | o       |            2 |         000010 |      6 |     365 |
-  | ves          | ve      |           36 |         100100 |      6 |     371 |
-  | s␣           | s       |           24 |         011000 |      6 |     377 |
-  | ␣yo          | ␣y      |           25 |         011001 |      6 |     383 |
-  | ou.          | ou      |           27 |         011011 |      6 |     389 |
-  | .            |         |            0 | 00000000101110 |     14 |     403 |
-  |--------------+---------+--------------+----------------+--------+---------|
+  | $Dictionary$ | $Match$ | $Dict$ $index$ |     $Codeword$ | $Bits$ | $Total$ |
+  |--------------+---------+----------------+----------------+--------+---------|
+  | L            |         |              0 |       01001100 |      8 |       8 |
+  | o            |         |              0 |       01101111 |      8 |      16 |
+  | v            |         |              0 |      001110110 |      9 |      25 |
+  | e            |         |              0 |     0001100101 |     10 |      35 |
+  | ␣            |         |              0 |     0001011111 |     10 |      45 |
+  | t            |         |              0 |    00001110100 |     11 |      56 |
+  | h            |         |              0 |    00001101000 |     11 |      67 |
+  | e␣           | e       |              4 |            100 |      3 |      70 |
+  | ␣h           | ␣       |              5 |            101 |      3 |      73 |
+  | he           | h       |              7 |           0111 |      4 |      77 |
+  | ea           | e       |              4 |           0100 |      4 |      81 |
+  | a            |         |              0 |   000001100001 |     12 |      93 |
+  | r            |         |              0 |   000001110010 |     12 |     105 |
+  | t␣           | t       |              6 |           0110 |      4 |     109 |
+  | ␣t           | ␣       |              5 |           0101 |      4 |     113 |
+  | th           | t       |              6 |           0110 |      4 |     117 |
+  | ha           | h       |              7 |           0111 |      4 |     121 |
+  | at           | a       |             12 |          01100 |      5 |     126 |
+  | t␣h          | t␣      |             14 |          01110 |      5 |     131 |
+  | hu           | h       |              7 |          00111 |      5 |     136 |
+  | u            |         |              0 |  0000001110101 |     13 |     149 |
+  | rt           | r       |             13 |          01101 |      5 |     154 |
+  | ts           | t       |              6 |          00110 |      5 |     159 |
+  | s            |         |              0 |  0000001110011 |     13 |     172 |
+  | ␣y           | ␣       |              5 |          00101 |      5 |     177 |
+  | y            |         |              0 |  0000001111001 |     13 |     190 |
+  | ou           | o       |              2 |          00010 |      5 |     195 |
+  | u,           | u       |             21 |          10101 |      5 |     200 |
+  | ,            |         |              0 |  0000000101100 |     13 |     213 |
+  | ␣b           | ␣       |              5 |          00101 |      5 |     218 |
+  | b            |         |              0 |  0000001100010 |     13 |     231 |
+  | ut           | u       |             21 |          10101 |      5 |     236 |
+  | t␣n          | t␣      |             14 |          01110 |      5 |     241 |
+  | n            |         |              0 | 00000001101110 |     14 |     255 |
+  | ev           | e       |              4 |         000100 |      6 |     261 |
+  | ve           | v       |              3 |         000011 |      6 |     267 |
+  | er           | e       |              4 |         000100 |      6 |     273 |
+  | r␣           | r       |             13 |         001101 |      6 |     279 |
+  | ␣hu          | ␣h      |              9 |         001001 |      6 |     285 |
+  | ur           | u       |             21 |         010101 |      6 |     291 |
+  | rt␣          | rt      |             22 |         010110 |      6 |     297 |
+  | ␣th          | ␣t      |             15 |         001111 |      6 |     303 |
+  | he␣          | he      |             10 |         001010 |      6 |     309 |
+  | ␣he          | ␣h      |              9 |         001001 |      6 |     315 |
+  | ear          | ea      |             11 |         001011 |      6 |     321 |
+  | rt␣t         | rt␣     |             41 |         101001 |      6 |     327 |
+  | tha          | th      |             16 |         010000 |      6 |     333 |
+  | at␣          | at      |             18 |         010010 |      6 |     339 |
+  | ␣l           | ␣       |              5 |         000101 |      6 |     345 |
+  | l            |         |              0 | 00000001101100 |     14 |     359 |
+  | ov           | o       |              2 |         000010 |      6 |     365 |
+  | ves          | ve      |             36 |         100100 |      6 |     371 |
+  | s␣           | s       |             24 |         011000 |      6 |     377 |
+  | ␣yo          | ␣y      |             25 |         011001 |      6 |     383 |
+  | ou.          | ou      |             27 |         011011 |      6 |     389 |
+  | .            |         |              0 | 00000000101110 |     14 |     403 |
+  |--------------+---------+----------------+----------------+--------+---------|
 
   Well, results ($l = 403$ bits) are clearly worse than they were with
   previous coding algorithms. On the contrary, LZW implementation is
@@ -524,7 +523,7 @@
   p_t(a|s) = \frac{τ_t(s,a)}{τ_t(s)+1} = \frac{1}{4+1} = \frac{1}{5}
   \end{align*}
 
-  Textbook says that correct probability is \frac{1}{4}. So that's a
+  Textbook says that correct probability is $\frac{1}{4}$. So that's a
   mistake in my opinion. The correct length of coded string is this
   $249$ bits, not $250$.
 
@@ -631,7 +630,164 @@
   Thus we can see that in general big window $D$ doesn't help with
   english text, because on average coincedences of big words (>5
   symbols) are pretty rare.
+* Burrows-Wheeler + book stack
+  Implemented algorithm uses Burrows-Wheeler transformation with MTF
+  (book stack) algorithm together to obtain results. That's a first
+  round, straight-forward MTF without escapes.
 
+  One thing to mention before is that I'm encoding $diff+1$ where
+  $diff$ is a number of different words between current and previous
+  occurences of the char because universal coding work only in range
+  ${1..}$, whereas $diff$ can be zero (example -- ~aaaa~). Used
+  universal coding is monotonic (levenshtein). When character is not
+  in the history, i'm assuming there's a list of all ascii characters
+  (length 256) before the processed string.
+
+  First, let's perform the transformation. Here's the result:
+
+  ~uu.,eertttttetsseehh_hhvhhvvntttt______yyLleaauuteaaurrr____roohhboeo__~
+
+  And the number of this string in sorted list is 3 (index 2). Here's
+  a table that shows how algorithm worked:
+
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
+  | $Char$ | $New$ | $Dist$ | $Diff$ | $Code$ $word$ | $Bits$ | $Total$ |
+  |--------+-------+--------+--------+---------------+--------+---------|
+  | u      |     1 |    139 |    139 | 1110110001100 |     13 |      13 |
+  | u      |     0 |      2 |      0 |            10 |      2 |      15 |
+  | .      |     1 |    212 |    211 | 1110111010100 |     13 |      28 |
+  | ,      |     1 |    215 |    214 | 1110111010111 |     13 |      41 |
+  | e      |     1 |    159 |    158 | 1110110011111 |     13 |      54 |
+  | e      |     0 |      2 |      0 |            10 |      2 |      56 |
+  | r      |     1 |    148 |    146 | 1110110010011 |     13 |      69 |
+  | t      |     1 |    147 |    145 | 1110110010010 |     13 |      82 |
+  | t      |     0 |      2 |      0 |            10 |      2 |      84 |
+  | t      |     0 |      2 |      0 |            10 |      2 |      86 |
+  | t      |     0 |      2 |      0 |            10 |      2 |      88 |
+  | t      |     0 |      2 |      0 |            10 |      2 |      90 |
+  | e      |     0 |      8 |      2 |           101 |      3 |      93 |
+  | t      |     0 |      3 |      1 |           100 |      3 |      96 |
+  | s      |     1 |    155 |    147 | 1110110010100 |     13 |     109 |
+  | s      |     0 |      2 |      0 |            10 |      2 |     111 |
+  | e      |     0 |      5 |      2 |           101 |      3 |     114 |
+  | e      |     0 |      2 |      0 |            10 |      2 |     116 |
+  | h      |     1 |    170 |    159 | 1110110100000 |     13 |     129 |
+  | h      |     0 |      2 |      0 |            10 |      2 |     131 |
+  |        |     1 |    181 |    169 | 1110110101010 |     13 |     144 |
+  | h      |     0 |      3 |      1 |           100 |      3 |     147 |
+  | h      |     0 |      2 |      0 |            10 |      2 |     149 |
+  | v      |     1 |    161 |    147 | 1110110010100 |     13 |     162 |
+  | h      |     0 |      3 |      1 |           100 |      3 |     165 |
+  | h      |     0 |      2 |      0 |            10 |      2 |     167 |
+  | v      |     0 |      4 |      1 |           100 |      3 |     170 |
+  | v      |     0 |      2 |      0 |            10 |      2 |     172 |
+  | n      |     1 |    174 |    156 | 1110110011101 |     13 |     185 |
+  | t      |     0 |     17 |      6 |        110011 |      6 |     191 |
+  | t      |     0 |      2 |      0 |            10 |      2 |     193 |
+  | t      |     0 |      2 |      0 |            10 |      2 |     195 |
+  | t      |     0 |      2 |      0 |            10 |      2 |     197 |
+  |        |     0 |     14 |      4 |        110001 |      6 |     203 |
+  |        |     0 |      2 |      0 |            10 |      2 |     205 |
+  |        |     0 |      2 |      0 |            10 |      2 |     207 |
+  |        |     0 |      2 |      0 |            10 |      2 |     209 |
+  |        |     0 |      2 |      0 |            10 |      2 |     211 |
+  |        |     0 |      2 |      0 |            10 |      2 |     213 |
+  | y      |     1 |    174 |    146 | 1110110010011 |     13 |     226 |
+  | y      |     0 |      2 |      0 |            10 |      2 |     228 |
+  | L      |     1 |    221 |    192 | 1110111000001 |     13 |     241 |
+  | l      |     1 |    190 |    161 | 1110110100010 |     13 |     254 |
+  | e      |     0 |     27 |      8 |       1101001 |      7 |     261 |
+  | a      |     1 |    203 |    173 | 1110110101110 |     13 |     274 |
+  | a      |     0 |      2 |      0 |            10 |      2 |     276 |
+  | u      |     0 |     46 |     14 |       1101111 |      7 |     283 |
+  | u      |     0 |      2 |      0 |            10 |      2 |     285 |
+  | t      |     0 |     17 |      7 |       1101000 |      7 |     292 |
+  | e      |     0 |      7 |      3 |        110000 |      6 |     298 |
+  | a      |     0 |      6 |      3 |        110000 |      6 |     304 |
+  | a      |     0 |      2 |      0 |            10 |      2 |     306 |
+  | u      |     0 |      6 |      3 |        110000 |      6 |     312 |
+  | r      |     0 |     48 |     12 |       1101101 |      7 |     319 |
+  | r      |     0 |      2 |      0 |            10 |      2 |     321 |
+  | r      |     0 |      2 |      0 |            10 |      2 |     323 |
+  |        |     0 |     19 |      8 |       1101001 |      7 |     330 |
+  |        |     0 |      2 |      0 |            10 |      2 |     332 |
+  |        |     0 |      2 |      0 |            10 |      2 |     334 |
+  |        |     0 |      2 |      0 |            10 |      2 |     336 |
+  | r      |     0 |      6 |      1 |           100 |      3 |     339 |
+  | o      |     1 |    206 |    160 | 1110110100001 |     13 |     352 |
+  | o      |     0 |      2 |      0 |            10 |      2 |     354 |
+  | h      |     0 |     39 |     12 |       1101101 |      7 |     361 |
+  | h      |     0 |      2 |      0 |            10 |      2 |     363 |
+  | b      |     1 |    223 |    174 | 1110110101111 |     13 |     376 |
+  | o      |     0 |      5 |      2 |           101 |      3 |     379 |
+  | e      |     0 |     19 |      7 |       1101000 |      7 |     386 |
+  | o      |     0 |      3 |      1 |           100 |      3 |     389 |
+  |        |     0 |     11 |      5 |        110010 |      6 |     395 |
+  |        |     0 |      2 |      0 |            10 |      2 |     397 |
+  |--------+-------+--------+--------+---------------+--------+---------|
+
+  So we get $393$ bits in total for transmitting this sequence using
+  straight-forward MTF method. Also index $3$ from BWT will take 3
+  bits if encoded using elias coding. So in total $396$ bits. Already
+  better than raw $568$, but worse than algorithms mentioned
+  before. Performance with other universal codes is worse -- $400$ in
+  total with elias and $2975$ in total with unary (no wonder, encoding
+  big numbers takes a lot).
+
+  Let's take another approach with escape symbols and enumerative
+  coding which is described in part 4.6 of the textbook.
+
+  Running mtfs transfromation will yield this result:
+
+  ~esc 0 esc esc esc 0 esc esc 0 0 0 0 2 1 esc 0 2 0 esc 0 esc 1 0 esc 1 0 1 0 esc 6 0 0 0 4 0 0 0 0 0 esc 0 esc esc 8 esc 0 14 0 7 3 3 0 3 12 0 0 8 0 0 0 1 esc 0 12 0 esc 2 7 1 5 0~
+
+  Coding it using enumerative coding gives us $267$ bits (i just ran a
+  function ~enumerative~, it doesn't trace anything). Transferring a
+  character per escape with 17 escapes in total gives us $17 × 8 =
+  136$ bits. Summing up, we get $267 + 136 + 3 = 406$ (remember 3 bits
+  from BWT). Less than with straight-forward MTF coding. Both
+  approaches are pretty simple to implement on the other hand.
+* Standart archiving
+  Last step is try to apply some standart archiving functions to our
+  proverb. I'll be really simple here and try it out with ~GZip~
+  algorithm from library ~zlib~[fn:3]. It uses "Deflate" algorithm
+  that's a combination of LZ77 and Huffman coding[fn:4].
+
+  So results are pretty sad for the current proverb: $l = 544$, only
+  slightly lower than original $568$ bits. On the other hand, lorem
+  ipsum text is compressed from $4000$ to $2472$ bits, which is a
+  significant performance boost. Small texts are not that
+  representative anyways.
+* Comparison and summary
+  Let's compare all approaches we used:
+
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
+  | $Method$            | $Bits$ |
+  |---------------------+--------|
+  | Plain               |    568 |
+  | Two pass huffman    |    394 |
+  | Adaptive arithmetic |    385 |
+  | Enumerative         |    377 |
+  | LZ77                |    337 |
+  | LZW                 |    403 |
+  | PPMA                |    346 |
+  | BW+MTF plain        |    396 |
+  | BW+MTF enumerative  |    406 |
+  | GZip                |    544 |
+  |---------------------+--------|
+
+  It's hard to say which one is better in general, but in our case
+  LZ77 is as absolute winner (though we used a large window which is
+  not suitable for real usage), PPMA is the second one (more or
+  lessfair). GZip showed the worst together with LZW. We don't compare
+  speed efficiency of algorithms which is important parameter,
+  comparing compression rate doesn't really make the sense in general
+  -- different tasks define different requirements for encoding
+  algorithms. Another conclusion (that was covered in textbook too) is
+  that two-pass algorithms are not that much better comparing to
+  one-pass and it's clearly true based on our comparison table.
 * Footnotes
 [fn:1] https://en.wikipedia.org/wiki/Arithmetic_coding#Precision_and_renormalization
 [fn:2] http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf
+[fn:3] https://hackage.haskell.org/package/zlib-0.6.1.1/docs/Codec-Compression-GZip.html
+[fn:4] http://zlib.net/
