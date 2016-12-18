@@ -1,4 +1,5 @@
 #+LANGUAGE: en
+#+ATTR_HTML: :style line-height: 7px; width: 100%;
 #+TITLE: Information theory: HW #3 solution
 #+AUTHOR: Volkhov Mikhail, M3338
 
@@ -7,8 +8,8 @@
   and provide reports on them. Reports will contain logs from
   algorithms that will show how it operates this data. Tables with
   explanation will be attached. I won't attach haskell snippets this
-  time as they became really big and complex. Instead, i'll put a
-  separate pdf with all the code separately. *TODO*
+  time as they became really big and complex. Instead, i'll put it all
+  to the last section of this document.
 
   Proverb correspondent to my task is the following:
 
@@ -502,6 +503,135 @@
   Interestingly, unary universal coding performs on average better
   than levenshtein/elias. And most importantly, our assumption
   appeared to be correct -- LZW saves us $144$ bits (0.34 percent).
+* PPM
+  I've chosen PPMA as main algorithm to implement because it's simpler
+  to debug. I've added support of exceptions. First thing I need to
+  say is that table 4.5 of the textbook has a mistake. On step 39
+  $p(a|s)$ is calculated incorrectly: initial context $s$ ~OULD_~ is
+  matched once before on the step $24$ (as it's written in $τ_t(s)$ of
+  step 39), then it's reduced three times to ~_~. Notice that no
+  bigger suffix of ~OULD_~ (then ~_~) is matched in other places
+  before -- there's only one ~D_~ at string's position 27. So $τ_t(s)$
+  of step 39 says that ~_~ is found 8 times. Indeed -- on positions
+  $3, 6, 13, 16, 19, 22, 28, 31$. Using exceptions rule we ignore all
+  ~_~ that are followed by characters that followed any of our
+  pre-contexts: one of ~OULD_~, ~ULD_~, ~LD_~, ~D_~. But that's
+  exactly only one character ~W~. So positions $6, 13, 17, 31$ are
+  left (and on position 13 ~_~ is followed by ~D~), which gives us a
+  probability of ~D~ after ~_~:
+
+  \begin{align*}
+  p_t(a|s) = \frac{τ_t(s,a)}{τ_t(s)+1} = \frac{1}{4+1} = \frac{1}{5}
+  \end{align*}
+
+  Textbook says that correct probability is \frac{1}{4}. So that's a
+  mistake in my opinion. The correct length of coded string is this
+  $249$ bits, not $250$.
+
+  Back to the task proverb. Here's a table with algorithm trace,
+  launched with $D = 5$:
+
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%; float: left;
+  | $Char$ | $Context$ $s$ |      $τ_t(s)$ | $p_t(esc \mid s)$        | $p_t(a \mid s)$ |
+  |--------+---------------+---------------+--------------------------+-----------------|
+  | L      | #             |             0 | 1/1                      | 1/256           |
+  | o      | #             |             1 | 1/2                      | 1/255           |
+  | v      | #             |             2 | 1/3                      | 1/254           |
+  | e      | #             |             3 | 1/4                      | 1/253           |
+  | ␣      | #             |             4 | 1/5                      | 1/252           |
+  | t      | #             |             5 | 1/6                      | 1/251           |
+  | h      | #             |             6 | 1/7                      | 1/250           |
+  | e      | #             |             7 |                          | 1/8             |
+  | ␣      | "e"           |             1 |                          | 1/2             |
+  | h      | "e␣"          |         1,1,9 | 1/2,1/1                  | 1/9             |
+  | e      | "h"           |             1 |                          | 1/2             |
+  | a      | "he"          |        1,2,11 | 1/2,1/1,1/10             | 1/249           |
+  | r      | #             |            12 | 1/13                     | 1/248           |
+  | t      | #             |            13 |                          | 1/14            |
+  | ␣      | "t"           |          1,14 | 1/2                      | 2/13            |
+  | t      | "␣"           |             2 |                          | 1/3             |
+  | h      | "␣t"          |             1 |                          | 1/2             |
+  | a      | "␣th"         |      1,1,2,17 | 1/2,1/1,1/1              | 1/15            |
+  | t      | "a"           |          1,18 | 1/2                      | 1/6             |
+  | ␣      | "t"           |             3 |                          | 1/4             |
+  | h      | "t␣"          |           1,3 | 1/2                      | 1/2             |
+  | u      | "␣h"          |        1,3,21 | 1/2,1/2,1/17             | 1/247           |
+  | r      | #             |            22 |                          | 1/23            |
+  | t      | "r"           |             1 |                          | 1/2             |
+  | s      | "rt"          |        1,4,24 | 1/2,1/3,1/17             | 1/246           |
+  | ␣      | #             |            25 |                          | 2/13            |
+  | y      | "␣"           |          4,26 | 1/5,1/18                 | 1/245           |
+  | o      | #             |            27 |                          | 1/28            |
+  | u      | "o"           |          1,28 | 1/2                      | 1/28            |
+  | ,      | "u"           |          1,29 | 1/2,1/28                 | 1/244           |
+  | ␣      | #             |            30 |                          | 5/31            |
+  | b      | "␣"           |          5,31 | 1/6,1/22                 | 1/243           |
+  | u      | #             |            32 |                          | 2/33            |
+  | t      | "u"           |          2,33 | 1/3                      | 5/31            |
+  | ␣      | "t"           |             5 |                          | 1/3             |
+  | n      | "t␣"          |        2,6,35 | 1/3,1/3,1/24             | 1/242           |
+  | e      | #             |            36 |                          | 3/37            |
+  | v      | "e"           |          3,37 | 1/4                      | 1/29            |
+  | e      | "v"           |             1 |                          | 1/2             |
+  | r      | "ve"          |        1,4,39 | 1/2,1/3                  | 2/29            |
+  | ␣      | "r"           |          2,40 | 1/3                      | 1/5             |
+  | h      | "␣"           |             7 |                          | 1/4             |
+  | u      | "␣h"          |             2 |                          | 1/3             |
+  | r      | "␣hu"         |             1 |                          | 1/2             |
+  | t      | "␣hur"        |             1 |                          | 1/2             |
+  | ␣      | "␣hurt"       |       1,1,1,2 | 1/2,1/1,1/1              | 1/2             |
+  | t      | "rt␣"         |             1 |                          | 1/2             |
+  | h      | "rt␣t"        |             1 |                          | 1/2             |
+  | e      | "rt␣th"       |         1,1,2 | 1/2,1/1                  | 1/2             |
+  | ␣      | "␣the"        |             1 |                          | 1/2             |
+  | h      | "␣the␣"       |             1 |                          | 1/2             |
+  | e      | "the␣h"       |             1 |                          | 1/2             |
+  | a      | "he␣he"       |             1 |                          | 1/2             |
+  | r      | "e␣hea"       |             1 |                          | 1/2             |
+  | t      | "␣hear"       |             1 |                          | 1/2             |
+  | ␣      | "heart"       |             1 |                          | 1/2             |
+  | t      | "eart␣"       |             1 |                          | 1/2             |
+  | h      | "art␣t"       |             1 |                          | 1/2             |
+  | a      | "rt␣th"       |             2 |                          | 1/3             |
+  | t      | "t␣tha"       |             1 |                          | 1/2             |
+  | ␣      | "␣that"       |             1 |                          | 1/2             |
+  | l      | "that␣"       | 1,1,1,5,11,61 | 1/2,1/1,1/1,1/5,1/3,1/40 | 1/241           |
+  | o      | #             |            62 |                          | 2/63            |
+  | v      | "o"           |             2 |                          | 1/3             |
+  | e      | "ov"          |             1 |                          | 1/2             |
+  | s      | "ove"         |      1,2,7,65 | 1/2,1/2,1/4              | 1/42            |
+  | ␣      | "s"           |             1 |                          | 1/2             |
+  | y      | "s␣"          |             1 |                          | 1/2             |
+  | o      | "s␣y"         |             1 |                          | 1/2             |
+  | u      | "s␣yo"        |             1 |                          | 1/2             |
+  | .      | "s␣you"       |  1,1,1,1,4,70 | 1/2,1/1,1/1,1/1,1/4,1/54 | 1/240           |
+  |--------+---------------+---------------+--------------------------+-----------------|
+
+  Finaly we have $l = 345 + 1 = 346$ bits. Result is pretty good, much
+  better then previous algorithm implementations. Here's also a
+  comparison table for different $D$ -- both original proverb and
+  lorem ipsum text mentioned in the previous section:
+
+  #+ATTR_HTML: :border 2 :rules all :frame border :style line-height: 7px; width: 100%;
+  | $D$ | $Proverb$ | $Lorem$ $Ipsum$ |
+  |-----+-----------+-----------------|
+  |   1 |       358 |            2340 |
+  |   2 |       348 |            2355 |
+  |   3 |       345 |            2364 |
+  |   4 |       345 |            2367 |
+  |   5 |       346 |            2366 |
+  |   6 |       345 |            2366 |
+  |   7 |       345 |            2366 |
+  |   8 |       345 |            2366 |
+  |   9 |       345 |            2366 |
+  |  10 |       345 |            2366 |
+  |  20 |       345 |            2366 |
+  |-----+-----------+-----------------|
+
+  Thus we can see that in general big window $D$ doesn't help with
+  english text, because on average coincedences of big words (>5
+  symbols) are pretty rare.
+
 * Footnotes
 [fn:1] https://en.wikipedia.org/wiki/Arithmetic_coding#Precision_and_renormalization
 [fn:2] http://www.hpl.hp.com/techreports/2004/HPL-2004-76.pdf

@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2016-12-17 Sat 16:13 -->
+<!-- 2016-12-18 Sun 14:54 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="viewport" content="width=device-width, initial-scale=1" />
 <title>Information theory: HW #3 solution</title>
@@ -176,6 +176,7 @@ for the JavaScript code in this tag.
 <li><a href="#orgheadline4">4. Enumerative</a></li>
 <li><a href="#orgheadline5">5. LZ77</a></li>
 <li><a href="#orgheadline6">6. LZW</a></li>
+<li><a href="#orgheadline7">7. PPM</a></li>
 </ul>
 </div>
 </div>
@@ -188,8 +189,8 @@ So the task is to implement several algorithms of data compression
 and provide reports on them. Reports will contain logs from
 algorithms that will show how it operates this data. Tables with
 explanation will be attached. I won't attach haskell snippets this
-time as they became really big and complex. Instead, i'll put a
-separate pdf with all the code separately. <b>TODO</b>
+time as they became really big and complex. Instead, i'll put it all
+to the last section of this document.
 </p>
 
 <p>
@@ -2961,6 +2962,736 @@ appeared to be correct &#x2013; LZW saves us \(144\) bits (0.34 percent).
 </p>
 </div>
 </div>
+<div id="outline-container-orgheadline7" class="outline-2">
+<h2 id="orgheadline7"><span class="section-number-2">7</span> PPM</h2>
+<div class="outline-text-2" id="text-7">
+<p>
+I've chosen PPMA as main algorithm to implement because it's simpler
+to debug. I've added support of exceptions. First thing I need to
+say is that table 4.5 of the textbook has a mistake. On step 39
+\(p(a|s)\) is calculated incorrectly: initial context \(s\) <code>OULD_</code> is
+matched once before on the step \(24\) (as it's written in \(τ_t(s)\) of
+step 39), then it's reduced three times to <code>_</code>. Notice that no
+bigger suffix of <code>OULD_</code> (then <code>_</code>) is matched in other places
+before &#x2013; there's only one <code>D_</code> at string's position 27. So \(τ_t(s)\)
+of step 39 says that <code>_</code> is found 8 times. Indeed &#x2013; on positions
+\(3, 6, 13, 16, 19, 22, 28, 31\). Using exceptions rule we ignore all
+<code>_</code> that are followed by characters that followed any of our
+pre-contexts: one of <code>OULD_</code>, <code>ULD_</code>, <code>LD_</code>, <code>D_</code>. But that's
+exactly only one character <code>W</code>. So positions \(6, 13, 17, 31\) are
+left (and on position 13 <code>_</code> is followed by <code>D</code>), which gives us a
+probability of <code>D</code> after <code>_</code>:
+</p>
+
+\begin{align*}
+p_t(a|s) = \frac{τ_t(s,a)}{τ_t(s)+1} = \frac{1}{4+1} = \frac{1}{5}
+\end{align*}
+
+<p>
+Textbook says that correct probability is \frac{1}{4}. So that's a
+mistake in my opinion. The correct length of coded string is this
+\(249\) bits, not \(250\).
+</p>
+
+<p>
+Back to the task proverb. Here's a table with algorithm trace,
+launched with \(D = 5\):
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%; float: left;">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">\(Char\)</th>
+<th scope="col" class="org-left">\(Context\) \(s\)</th>
+<th scope="col" class="org-right">\(τ_t(s)\)</th>
+<th scope="col" class="org-left">\(p_t(esc \mid s)\)</th>
+<th scope="col" class="org-left">\(p_t(a \mid s)\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">L</td>
+<td class="org-left">#</td>
+<td class="org-right">0</td>
+<td class="org-left">1/1</td>
+<td class="org-left">1/256</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-left">#</td>
+<td class="org-right">1</td>
+<td class="org-left">1/2</td>
+<td class="org-left">1/255</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-left">#</td>
+<td class="org-right">2</td>
+<td class="org-left">1/3</td>
+<td class="org-left">1/254</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">#</td>
+<td class="org-right">3</td>
+<td class="org-left">1/4</td>
+<td class="org-left">1/253</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">#</td>
+<td class="org-right">4</td>
+<td class="org-left">1/5</td>
+<td class="org-left">1/252</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">#</td>
+<td class="org-right">5</td>
+<td class="org-left">1/6</td>
+<td class="org-left">1/251</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">#</td>
+<td class="org-right">6</td>
+<td class="org-left">1/7</td>
+<td class="org-left">1/250</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">#</td>
+<td class="org-right">7</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/8</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"e"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">"e␣"</td>
+<td class="org-right">1,1,9</td>
+<td class="org-left">1/2,1/1</td>
+<td class="org-left">1/9</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">"h"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-left">"he"</td>
+<td class="org-right">1,2,11</td>
+<td class="org-left">1/2,1/1,1/10</td>
+<td class="org-left">1/249</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-left">#</td>
+<td class="org-right">12</td>
+<td class="org-left">1/13</td>
+<td class="org-left">1/248</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">#</td>
+<td class="org-right">13</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/14</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"t"</td>
+<td class="org-right">1,14</td>
+<td class="org-left">1/2</td>
+<td class="org-left">2/13</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"␣"</td>
+<td class="org-right">2</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/3</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">"␣t"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-left">"␣th"</td>
+<td class="org-right">1,1,2,17</td>
+<td class="org-left">1/2,1/1,1/1</td>
+<td class="org-left">1/15</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"a"</td>
+<td class="org-right">1,18</td>
+<td class="org-left">1/2</td>
+<td class="org-left">1/6</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"t"</td>
+<td class="org-right">3</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/4</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">"t␣"</td>
+<td class="org-right">1,3</td>
+<td class="org-left">1/2</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-left">"␣h"</td>
+<td class="org-right">1,3,21</td>
+<td class="org-left">1/2,1/2,1/17</td>
+<td class="org-left">1/247</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-left">#</td>
+<td class="org-right">22</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/23</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"r"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">s</td>
+<td class="org-left">"rt"</td>
+<td class="org-right">1,4,24</td>
+<td class="org-left">1/2,1/3,1/17</td>
+<td class="org-left">1/246</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">#</td>
+<td class="org-right">25</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">2/13</td>
+</tr>
+
+<tr>
+<td class="org-left">y</td>
+<td class="org-left">"␣"</td>
+<td class="org-right">4,26</td>
+<td class="org-left">1/5,1/18</td>
+<td class="org-left">1/245</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-left">#</td>
+<td class="org-right">27</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/28</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-left">"o"</td>
+<td class="org-right">1,28</td>
+<td class="org-left">1/2</td>
+<td class="org-left">1/28</td>
+</tr>
+
+<tr>
+<td class="org-left">,</td>
+<td class="org-left">"u"</td>
+<td class="org-right">1,29</td>
+<td class="org-left">1/2,1/28</td>
+<td class="org-left">1/244</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">#</td>
+<td class="org-right">30</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">5/31</td>
+</tr>
+
+<tr>
+<td class="org-left">b</td>
+<td class="org-left">"␣"</td>
+<td class="org-right">5,31</td>
+<td class="org-left">1/6,1/22</td>
+<td class="org-left">1/243</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-left">#</td>
+<td class="org-right">32</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">2/33</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"u"</td>
+<td class="org-right">2,33</td>
+<td class="org-left">1/3</td>
+<td class="org-left">5/31</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"t"</td>
+<td class="org-right">5</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/3</td>
+</tr>
+
+<tr>
+<td class="org-left">n</td>
+<td class="org-left">"t␣"</td>
+<td class="org-right">2,6,35</td>
+<td class="org-left">1/3,1/3,1/24</td>
+<td class="org-left">1/242</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">#</td>
+<td class="org-right">36</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">3/37</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-left">"e"</td>
+<td class="org-right">3,37</td>
+<td class="org-left">1/4</td>
+<td class="org-left">1/29</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">"v"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-left">"ve"</td>
+<td class="org-right">1,4,39</td>
+<td class="org-left">1/2,1/3</td>
+<td class="org-left">2/29</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"r"</td>
+<td class="org-right">2,40</td>
+<td class="org-left">1/3</td>
+<td class="org-left">1/5</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">"␣"</td>
+<td class="org-right">7</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/4</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-left">"␣h"</td>
+<td class="org-right">2</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/3</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-left">"␣hu"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"␣hur"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"␣hurt"</td>
+<td class="org-right">1,1,1,2</td>
+<td class="org-left">1/2,1/1,1/1</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"rt␣"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">"rt␣t"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">"rt␣th"</td>
+<td class="org-right">1,1,2</td>
+<td class="org-left">1/2,1/1</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"␣the"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">"␣the␣"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">"the␣h"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-left">"he␣he"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">r</td>
+<td class="org-left">"e␣hea"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"␣hear"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"heart"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"eart␣"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">h</td>
+<td class="org-left">"art␣t"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">a</td>
+<td class="org-left">"rt␣th"</td>
+<td class="org-right">2</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/3</td>
+</tr>
+
+<tr>
+<td class="org-left">t</td>
+<td class="org-left">"t␣tha"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"␣that"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">l</td>
+<td class="org-left">"that␣"</td>
+<td class="org-right">1,1,1,5,11,61</td>
+<td class="org-left">1/2,1/1,1/1,1/5,1/3,1/40</td>
+<td class="org-left">1/241</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-left">#</td>
+<td class="org-right">62</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">2/63</td>
+</tr>
+
+<tr>
+<td class="org-left">v</td>
+<td class="org-left">"o"</td>
+<td class="org-right">2</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/3</td>
+</tr>
+
+<tr>
+<td class="org-left">e</td>
+<td class="org-left">"ov"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">s</td>
+<td class="org-left">"ove"</td>
+<td class="org-right">1,2,7,65</td>
+<td class="org-left">1/2,1/2,1/4</td>
+<td class="org-left">1/42</td>
+</tr>
+
+<tr>
+<td class="org-left">␣</td>
+<td class="org-left">"s"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">y</td>
+<td class="org-left">"s␣"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">o</td>
+<td class="org-left">"s␣y"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">u</td>
+<td class="org-left">"s␣yo"</td>
+<td class="org-right">1</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">1/2</td>
+</tr>
+
+<tr>
+<td class="org-left">.</td>
+<td class="org-left">"s␣you"</td>
+<td class="org-right">1,1,1,1,4,70</td>
+<td class="org-left">1/2,1/1,1/1,1/1,1/4,1/54</td>
+<td class="org-left">1/240</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Finaly we have \(l = 345 + 1 = 346\) bits. Result is pretty good, much
+better then previous algorithm implementations. Here's also a
+comparison table for different \(D\) &#x2013; both original proverb and
+lorem ipsum text mentioned in the previous section:
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" style="line-height: 7px; width: 100%;">
+
+
+<colgroup>
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">\(D\)</th>
+<th scope="col" class="org-right">\(Proverb\)</th>
+<th scope="col" class="org-right">\(Lorem\) \(Ipsum\)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">1</td>
+<td class="org-right">358</td>
+<td class="org-right">2340</td>
+</tr>
+
+<tr>
+<td class="org-right">2</td>
+<td class="org-right">348</td>
+<td class="org-right">2355</td>
+</tr>
+
+<tr>
+<td class="org-right">3</td>
+<td class="org-right">345</td>
+<td class="org-right">2364</td>
+</tr>
+
+<tr>
+<td class="org-right">4</td>
+<td class="org-right">345</td>
+<td class="org-right">2367</td>
+</tr>
+
+<tr>
+<td class="org-right">5</td>
+<td class="org-right">346</td>
+<td class="org-right">2366</td>
+</tr>
+
+<tr>
+<td class="org-right">6</td>
+<td class="org-right">345</td>
+<td class="org-right">2366</td>
+</tr>
+
+<tr>
+<td class="org-right">7</td>
+<td class="org-right">345</td>
+<td class="org-right">2366</td>
+</tr>
+
+<tr>
+<td class="org-right">8</td>
+<td class="org-right">345</td>
+<td class="org-right">2366</td>
+</tr>
+
+<tr>
+<td class="org-right">9</td>
+<td class="org-right">345</td>
+<td class="org-right">2366</td>
+</tr>
+
+<tr>
+<td class="org-right">10</td>
+<td class="org-right">345</td>
+<td class="org-right">2366</td>
+</tr>
+
+<tr>
+<td class="org-right">20</td>
+<td class="org-right">345</td>
+<td class="org-right">2366</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Thus we can see that in general big window \(D\) doesn't help with
+english text, because on average coincedences of big words (&gt;5
+symbols) are pretty rare.
+</p>
+</div>
+</div>
 <div id="footnotes">
 <h2 class="footnotes">Footnotes: </h2>
 <div id="text-footnotes">
@@ -2978,7 +3709,7 @@ appeared to be correct &#x2013; LZW saves us \(144\) bits (0.34 percent).
 </div></div>
 <div id="postamble" class="status">
 <p class="author">Author: Volkhov Mikhail, M3338</p>
-<p class="date">Created: 2016-12-17 Sat 16:13</p>
+<p class="date">Created: 2016-12-18 Sun 14:54</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

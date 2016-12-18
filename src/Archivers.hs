@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -12,19 +13,19 @@ module Archivers (lz77Other,loremIpsum) where
 
 import qualified Base                  as B (Show (..))
 import           Control.Exception     (assert)
-import           Control.Lens          (makeLenses, to, use, uses, (%=), (+=), (.=),
-                                        (<>=), (^.), _1, _2)
+import           Control.Lens          (makeLenses, to, use, uses, view, (%=), (+=), (.=),
+                                        (<>=), (^.), _1, _2, _3)
 import           Control.Monad.Writer  (MonadWriter, Writer, runWriter, tell)
 import           Data.Bifunctor        (first, second)
 import           Data.Bits             (testBit)
 import qualified Data.ByteString       as BS
 import qualified Data.ByteString.Char8 as BSC
-import           Data.List             (dropWhileEnd, findIndex, nub, (!!))
+import           Data.List             (dropWhileEnd, findIndex, last, nub, (!!))
 import qualified Data.Map.Strict       as M
-import           Data.Maybe            (fromJust)
+import           Data.Maybe            (fromJust, mapMaybe)
 import           Data.Number.BigFloat  (BigFloat (..), Prec50, PrecPlus20)
 import           Data.Ord              (comparing)
-import           Data.Ratio            ((%))
+import           Data.Ratio            (denominator, numerator, (%))
 import qualified Data.Text             as T
 import           Data.Word             (Word16)
 import           Numeric               (showGFloat)
@@ -34,6 +35,9 @@ type String = [Char]
 
 dropEnd :: Int -> [a] -> [a]
 dropEnd i xs = take (length xs - i) xs
+
+takeEnd :: Int -> [a] -> [a]
+takeEnd i xs = drop (length xs - i) xs
 
 log2 :: Floating a => a -> a
 log2 k = log k / log 2
@@ -485,6 +489,102 @@ execLzw x = runWriter $ (runStateT (lzwEncode x) (LzwState [BS.unpack "\\"] []))
 ----------------------------------------------------------------------------
 -- PPMA
 ----------------------------------------------------------------------------
+
+data PpmState = PpmState
+    { _pLetters :: [Word8]
+    , _pGLog    :: Double
+    } deriving Show
+
+makeLenses ''PpmState
+
+data PpmTrace = PpmTrace
+    { pCurChar      :: Char
+    , pContextTimes :: [Int]
+    , pContext      :: [Char]
+    , pEscProbs     :: [Ratio Int]
+    , pCharProb     :: Ratio Int
+    }
+
+type PpmM a = StateT PpmState (Writer [PpmTrace]) a
+
+instance Show PpmTrace where
+    show PpmTrace {..} =
+        intercalate
+            "|"
+            [ ""
+            , [pCurChar]
+            , bool (show pContext) "#" (null pContext)
+            , intercalate "," (map show pContextTimes)
+            , intercalate "," (map showRat pEscProbs)
+            , showRat pCharProb
+            , ""
+            ]
+      where showRat r = show (numerator r) ++ "/" ++ show (denominator r)
+
+ppmCalculate :: Int -> ByteString -> Int -> PpmM ()
+ppmCalculate _ input i | i >= BS.length input = pure ()
+ppmCalculate d input i = do
+    history <- use pLetters
+    let c = BS.index input i
+        maxD = min d (length history `div` 2)
+        startContext :: [Word8]
+        startContext =
+            fromMaybe [] $ head $
+            mapMaybe (\d' -> dropEnd 1 . view _2 <$>
+                             head (findSubstring history $ takeEnd d' history)) $
+            reverse [0..maxD]
+        -- Input: exceptions list (match <> c), string s
+        -- Output: probability p_t(a|s), new exceptions
+        calcProb :: [[Word8]] -> [Word8] -> (Ratio Int, [[Word8]])
+        calcProb exs s =
+            let τ = filter (\(_,match,_) -> not (match `elem` exs)) $
+                    findSubstring (dropEnd (length s) history) s
+                τsa = filter ((== c) . view _3) τ
+            in (length τsa % (length τ + 1),
+               concatMap (tails . view _2) τ)
+        calcEscProb :: [[Word8]] -> [Word8] -> Ratio Int
+        calcEscProb exs s =
+            let τ = filter (\(_,match,_) -> not (match `elem` exs)) $
+                    findSubstring (dropEnd (length s) history) s
+            in 1 % (length τ + 1)
+        encodeEscapes probs ms exs s = do
+            let (prob, nextExc) = calcProb exs s
+                matchN = length $ findSubstring history s
+                probEsc = calcEscProb exs s
+                probs' = probEsc:probs
+                ms' = matchN:ms
+                nonMetProb = 1 % (256 - (length $ nub $ history))
+            if | prob /= 0 -> (probs,ms',prob)
+               | length s > 0 -> encodeEscapes probs' ms' (nub $ exs++nextExc) $ drop 1 s
+               | otherwise -> (probs',ms',nonMetProb)
+        r@(probs,matchNs,prob) = encodeEscapes [] [] [] startContext
+--    traceM $ "MaxD: " <> show maxD
+--    traceM $ "Start context: " <> show (fromWord8 startContext)
+--    traceShowM r
+    tell [PpmTrace (chr $ fromIntegral c)
+                   (reverse matchNs)
+                   (fromWord8 startContext)
+                   (reverse probs)
+                   prob]
+    pLetters <>= [c]
+    pGLog += (- (log2 (fromRational . toRational $ product probs * prob)))
+    ppmCalculate d input $ i + 1
+
+-- | For a text and pattern it returns the list of matches -- index of
+-- start and the next char after the match.
+findSubstring :: (Eq a) => [a] -> [a] -> [(Int, [a], a)]
+findSubstring t pat =
+    mapMaybe (\(i,m) -> guard (pat `isPrefixOf` m) >> pure (i, m, last m)) $
+    map (second $ take l) $
+    filter ((>= l) . length . snd) $
+    [0..] `zip` tails t
+  where
+    l = length pat + 1
+
+execPpm :: Int -> ByteString -> (((), PpmState), [PpmTrace])
+execPpm d x = runWriter $ (runStateT (ppmCalculate d x 0) (PpmState [] 0))
+
+ppmBytes p w = 1 + ceiling (_pGLog $ snd $ fst $ execPpm w p)
 
 ----------------------------------------------------------------------------
 -- Unrelated
